@@ -1,0 +1,18 @@
+{
+  "placements": [
+    { "slot_id": 1, "section_id": "C", "orientation": "normal" },
+    { "slot_id": 2, "section_id": "A", "orientation": "flipped" },
+    { "slot_id": 3, "section_id": "F", "orientation": "normal" },
+    { "slot_id": 4, "section_id": "B", "orientation": "normal" },
+    { "slot_id": 5, "section_id": "E", "orientation": "flipped" },
+    { "slot_id": 6, "section_id": "D", "orientation": "normal" }
+  ],
+  "structure_markers": [
+    { "section_id": "C", "local_id": 4, "structure_type": "standing_stone", "structure_color": "white" },
+    { "section_id": "A", "local_id": 9, "structure_type": "standing_stone", "structure_color": "green" },
+    { "section_id": "F", "local_id": 12, "structure_type": "standing_stone", "structure_color": "blue" },
+    { "section_id": "B", "local_id": 8, "structure_type": "abandoned_shack", "structure_color": "white" },
+    { "section_id": "E", "local_id": 15, "structure_type": "abandoned_shack", "structure_color": "green" },
+    { "section_id": "D", "local_id": 2, "structure_type": "abandoned_shack", "structure_color": "blue" }
+  ]
+}

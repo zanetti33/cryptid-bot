@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "clues": [
+    {
+      "clue_id": "terrain_pair_forest_desert",
+      "text": "On forest or desert",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "forest", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "desert", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_forest_water",
+      "text": "On forest or water",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "forest", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "water", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_forest_swamp",
+      "text": "On forest or swamp",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "forest", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "swamp", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_forest_mountain",
+      "text": "On forest or mountain",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "forest", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "mountain", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_desert_water",
+      "text": "On desert or water",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "desert", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "water", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_desert_swamp",
+      "text": "On desert or swamp",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "desert", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "swamp", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_desert_mountain",
+      "text": "On desert or mountain",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "desert", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "mountain", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_water_swamp",
+      "text": "On water or swamp",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "water", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "swamp", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_water_mountain",
+      "text": "On water or mountain",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "water", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "mountain", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "terrain_pair_swamp_mountain",
+      "text": "On swamp or mountain",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "terrain", "value": "swamp", "distance": 0},
+          {"op": "atom", "target": "terrain", "value": "mountain", "distance": 0}
+        ]
+      }
+    },
+    {
+      "clue_id": "within_one_forest",
+      "text": "Within one space of forest",
+      "predicate": {"op": "atom", "target": "terrain", "value": "forest", "distance": 1}
+    },
+    {
+      "clue_id": "within_one_desert",
+      "text": "Within one space of desert",
+      "predicate": {"op": "atom", "target": "terrain", "value": "desert", "distance": 1}
+    },
+    {
+      "clue_id": "within_one_swamp",
+      "text": "Within one space of swamp",
+      "predicate": {"op": "atom", "target": "terrain", "value": "swamp", "distance": 1}
+    },
+    {
+      "clue_id": "within_one_mountain",
+      "text": "Within one space of mountain",
+      "predicate": {"op": "atom", "target": "terrain", "value": "mountain", "distance": 1}
+    },
+    {
+      "clue_id": "within_one_water",
+      "text": "Within one space of water",
+      "predicate": {"op": "atom", "target": "terrain", "value": "water", "distance": 1}
+    },
+    {
+      "clue_id": "within_one_either_animal_territory",
+      "text": "Within one space of either animal territory",
+      "predicate": {
+        "op": "or",
+        "args": [
+          {"op": "atom", "target": "animal", "value": "bear", "distance": 1},
+          {"op": "atom", "target": "animal", "value": "cougar", "distance": 1}
+        ]
+      }
+    },
+    {
+      "clue_id": "within_two_standing_stone",
+      "text": "Within two spaces of a standing stone",
+      "predicate": {
+        "op": "atom",
+        "target": "structure_type",
+        "value": "standing_stone",
+        "distance": 2
+      }
+    },
+    {
+      "clue_id": "within_two_abandoned_shack",
+      "text": "Within two spaces of an abandoned shack",
+      "predicate": {
+        "op": "atom",
+        "target": "structure_type",
+        "value": "abandoned_shack",
+        "distance": 2
+      }
+    },
+    {
+      "clue_id": "within_two_bear_territory",
+      "text": "Within two spaces of bear territory",
+      "predicate": {"op": "atom", "target": "animal", "value": "bear", "distance": 2}
+    },
+    {
+      "clue_id": "within_two_cougar_territory",
+      "text": "Within two spaces of cougar territory",
+      "predicate": {"op": "atom", "target": "animal", "value": "cougar", "distance": 2}
+    },
+    {
+      "clue_id": "within_three_blue_structure",
+      "text": "Within three spaces of a blue structure",
+      "predicate": {
+        "op": "atom",
+        "target": "structure_color",
+        "value": "blue",
+        "distance": 3
+      }
+    },
+    {
+      "clue_id": "within_three_white_structure",
+      "text": "Within three spaces of a white structure",
+      "predicate": {
+        "op": "atom",
+        "target": "structure_color",
+        "value": "white",
+        "distance": 3
+      }
+    },
+    {
+      "clue_id": "within_three_green_structure",
+      "text": "Within three spaces of a green structure",
+      "predicate": {
+        "op": "atom",
+        "target": "structure_color",
+        "value": "green",
+        "distance": 3
+      }
+    },
+    {
+      "clue_id": "within_three_black_structure",
+      "text": "Within three spaces of a black structure",
+      "predicate": {
+        "op": "atom",
+        "target": "structure_color",
+        "value": "black",
+        "distance": 3
+      }
+    }
+  ]
+}
+
+

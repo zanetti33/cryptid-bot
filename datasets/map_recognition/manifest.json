@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "dataset": "map_recognition",
+  "samples": [
+    {
+      "sample_id": "image_easy",
+      "image_path": "datasets/map_recognition/images/image_easy.png",
+      "label_path": "datasets/map_recognition/labels/image_easy.json",
+      "annotation_status": "provisional"
+    },
+    {
+      "sample_id": "image_hard",
+      "image_path": "datasets/map_recognition/images/image_hard.png",
+      "label_path": "datasets/map_recognition/labels/image_hard.json",
+      "annotation_status": "provisional"
+    },
+    {
+      "sample_id": "screenshot_example",
+      "image_path": "datasets/map_recognition/images/screenshot_example.png",
+      "label_path": "datasets/map_recognition/labels/screenshot_example.json",
+      "annotation_status": "provisional"
+    }
+  ]
+}

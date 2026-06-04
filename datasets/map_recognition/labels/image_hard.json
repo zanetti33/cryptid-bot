@@ -1,0 +1,1273 @@
+{
+  "schema_version": 1,
+  "sample_id": "image_hard",
+  "image_path": "datasets/map_recognition/images/image_hard.png",
+  "image_size": {
+    "width": 1200,
+    "height": 1200
+  },
+  "annotation_status": "provisional",
+  "board_layout": {
+    "placements": [
+      {
+        "slot_id": 1,
+        "section_id": "C",
+        "orientation": "normal"
+      },
+      {
+        "slot_id": 2,
+        "section_id": "A",
+        "orientation": "flipped"
+      },
+      {
+        "slot_id": 3,
+        "section_id": "F",
+        "orientation": "normal"
+      },
+      {
+        "slot_id": 4,
+        "section_id": "B",
+        "orientation": "normal"
+      },
+      {
+        "slot_id": 5,
+        "section_id": "E",
+        "orientation": "flipped"
+      },
+      {
+        "slot_id": 6,
+        "section_id": "D",
+        "orientation": "normal"
+      }
+    ],
+    "structure_markers": [
+      {
+        "section_id": "C",
+        "local_id": 4,
+        "structure_type": "standing_stone",
+        "structure_color": "white"
+      },
+      {
+        "section_id": "A",
+        "local_id": 9,
+        "structure_type": "standing_stone",
+        "structure_color": "green"
+      },
+      {
+        "section_id": "F",
+        "local_id": 12,
+        "structure_type": "standing_stone",
+        "structure_color": "blue"
+      },
+      {
+        "section_id": "B",
+        "local_id": 8,
+        "structure_type": "abandoned_shack",
+        "structure_color": "white"
+      },
+      {
+        "section_id": "E",
+        "local_id": 15,
+        "structure_type": "abandoned_shack",
+        "structure_color": "green"
+      },
+      {
+        "section_id": "D",
+        "local_id": 2,
+        "structure_type": "abandoned_shack",
+        "structure_color": "blue"
+      }
+    ]
+  },
+  "tiles": [
+    {
+      "q": 0,
+      "r": 0,
+      "terrain": "mountain",
+      "section_id": "C",
+      "local_id": 1,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 1,
+      "r": 0,
+      "terrain": "mountain",
+      "section_id": "C",
+      "local_id": 2,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 2,
+      "r": 0,
+      "terrain": "mountain",
+      "section_id": "C",
+      "local_id": 3,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 3,
+      "r": 0,
+      "terrain": "mountain",
+      "section_id": "C",
+      "local_id": 4,
+      "animal": null,
+      "structure_type": "standing_stone",
+      "structure_color": "white",
+      "tokens": []
+    },
+    {
+      "q": 4,
+      "r": 0,
+      "terrain": "water",
+      "section_id": "C",
+      "local_id": 5,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 5,
+      "r": 0,
+      "terrain": "water",
+      "section_id": "C",
+      "local_id": 6,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 6,
+      "r": 0,
+      "terrain": "forest",
+      "section_id": "A",
+      "local_id": 1,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 7,
+      "r": 0,
+      "terrain": "desert",
+      "section_id": "A",
+      "local_id": 2,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 8,
+      "r": 0,
+      "terrain": "desert",
+      "section_id": "A",
+      "local_id": 3,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 9,
+      "r": 0,
+      "terrain": "desert",
+      "section_id": "A",
+      "local_id": 4,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 10,
+      "r": 0,
+      "terrain": "swamp",
+      "section_id": "A",
+      "local_id": 5,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 11,
+      "r": 0,
+      "terrain": "swamp",
+      "section_id": "A",
+      "local_id": 6,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 12,
+      "r": 0,
+      "terrain": "desert",
+      "section_id": "F",
+      "local_id": 1,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 13,
+      "r": 0,
+      "terrain": "desert",
+      "section_id": "F",
+      "local_id": 2,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 14,
+      "r": 0,
+      "terrain": "swamp",
+      "section_id": "F",
+      "local_id": 3,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 15,
+      "r": 0,
+      "terrain": "swamp",
+      "section_id": "F",
+      "local_id": 4,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 16,
+      "r": 0,
+      "terrain": "swamp",
+      "section_id": "F",
+      "local_id": 5,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 17,
+      "r": 0,
+      "terrain": "forest",
+      "section_id": "F",
+      "local_id": 6,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 0,
+      "r": 1,
+      "terrain": "swamp",
+      "section_id": "C",
+      "local_id": 7,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 1,
+      "r": 1,
+      "terrain": "swamp",
+      "section_id": "C",
+      "local_id": 8,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 2,
+      "r": 1,
+      "terrain": "forest",
+      "section_id": "C",
+      "local_id": 9,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 3,
+      "r": 1,
+      "terrain": "mountain",
+      "section_id": "C",
+      "local_id": 10,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 4,
+      "r": 1,
+      "terrain": "water",
+      "section_id": "C",
+      "local_id": 11,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 5,
+      "r": 1,
+      "terrain": "water",
+      "section_id": "C",
+      "local_id": 12,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 6,
+      "r": 1,
+      "terrain": "forest",
+      "section_id": "A",
+      "local_id": 7,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 7,
+      "r": 1,
+      "terrain": "forest",
+      "section_id": "A",
+      "local_id": 8,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 8,
+      "r": 1,
+      "terrain": "desert",
+      "section_id": "A",
+      "local_id": 9,
+      "animal": null,
+      "structure_type": "standing_stone",
+      "structure_color": "green",
+      "tokens": []
+    },
+    {
+      "q": 9,
+      "r": 1,
+      "terrain": "water",
+      "section_id": "A",
+      "local_id": 10,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 10,
+      "r": 1,
+      "terrain": "swamp",
+      "section_id": "A",
+      "local_id": 11,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 11,
+      "r": 1,
+      "terrain": "swamp",
+      "section_id": "A",
+      "local_id": 12,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 12,
+      "r": 1,
+      "terrain": "mountain",
+      "section_id": "F",
+      "local_id": 7,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 13,
+      "r": 1,
+      "terrain": "mountain",
+      "section_id": "F",
+      "local_id": 8,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 14,
+      "r": 1,
+      "terrain": "swamp",
+      "section_id": "F",
+      "local_id": 9,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 15,
+      "r": 1,
+      "terrain": "swamp",
+      "section_id": "F",
+      "local_id": 10,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 16,
+      "r": 1,
+      "terrain": "forest",
+      "section_id": "F",
+      "local_id": 11,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 17,
+      "r": 1,
+      "terrain": "forest",
+      "section_id": "F",
+      "local_id": 12,
+      "animal": null,
+      "structure_type": "standing_stone",
+      "structure_color": "blue",
+      "tokens": []
+    },
+    {
+      "q": 0,
+      "r": 2,
+      "terrain": "swamp",
+      "section_id": "C",
+      "local_id": 13,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 1,
+      "r": 2,
+      "terrain": "swamp",
+      "section_id": "C",
+      "local_id": 14,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 2,
+      "r": 2,
+      "terrain": "forest",
+      "section_id": "C",
+      "local_id": 15,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 3,
+      "r": 2,
+      "terrain": "forest",
+      "section_id": "C",
+      "local_id": 16,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 4,
+      "r": 2,
+      "terrain": "forest",
+      "section_id": "C",
+      "local_id": 17,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 5,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "C",
+      "local_id": 18,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 6,
+      "r": 2,
+      "terrain": "forest",
+      "section_id": "A",
+      "local_id": 13,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 7,
+      "r": 2,
+      "terrain": "forest",
+      "section_id": "A",
+      "local_id": 14,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 8,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "A",
+      "local_id": 15,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 9,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "A",
+      "local_id": 16,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 10,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "A",
+      "local_id": 17,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 11,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "A",
+      "local_id": 18,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 12,
+      "r": 2,
+      "terrain": "mountain",
+      "section_id": "F",
+      "local_id": 13,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 13,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "F",
+      "local_id": 14,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 14,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "F",
+      "local_id": 15,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 15,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "F",
+      "local_id": 16,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 16,
+      "r": 2,
+      "terrain": "water",
+      "section_id": "F",
+      "local_id": 17,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 17,
+      "r": 2,
+      "terrain": "forest",
+      "section_id": "F",
+      "local_id": 18,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 0,
+      "r": 3,
+      "terrain": "swamp",
+      "section_id": "B",
+      "local_id": 1,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 1,
+      "r": 3,
+      "terrain": "forest",
+      "section_id": "B",
+      "local_id": 2,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 2,
+      "r": 3,
+      "terrain": "forest",
+      "section_id": "B",
+      "local_id": 3,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 3,
+      "r": 3,
+      "terrain": "forest",
+      "section_id": "B",
+      "local_id": 4,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 4,
+      "r": 3,
+      "terrain": "forest",
+      "section_id": "B",
+      "local_id": 5,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 5,
+      "r": 3,
+      "terrain": "forest",
+      "section_id": "B",
+      "local_id": 6,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 6,
+      "r": 3,
+      "terrain": "water",
+      "section_id": "E",
+      "local_id": 1,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 7,
+      "r": 3,
+      "terrain": "water",
+      "section_id": "E",
+      "local_id": 2,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 8,
+      "r": 3,
+      "terrain": "water",
+      "section_id": "E",
+      "local_id": 3,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 9,
+      "r": 3,
+      "terrain": "water",
+      "section_id": "E",
+      "local_id": 4,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 10,
+      "r": 3,
+      "terrain": "desert",
+      "section_id": "E",
+      "local_id": 5,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 11,
+      "r": 3,
+      "terrain": "desert",
+      "section_id": "E",
+      "local_id": 6,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 12,
+      "r": 3,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 1,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 13,
+      "r": 3,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 2,
+      "animal": null,
+      "structure_type": "abandoned_shack",
+      "structure_color": "blue",
+      "tokens": []
+    },
+    {
+      "q": 14,
+      "r": 3,
+      "terrain": "mountain",
+      "section_id": "D",
+      "local_id": 3,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 15,
+      "r": 3,
+      "terrain": "mountain",
+      "section_id": "D",
+      "local_id": 4,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 16,
+      "r": 3,
+      "terrain": "mountain",
+      "section_id": "D",
+      "local_id": 5,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 17,
+      "r": 3,
+      "terrain": "mountain",
+      "section_id": "D",
+      "local_id": 6,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 0,
+      "r": 4,
+      "terrain": "swamp",
+      "section_id": "B",
+      "local_id": 7,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 1,
+      "r": 4,
+      "terrain": "swamp",
+      "section_id": "B",
+      "local_id": 8,
+      "animal": null,
+      "structure_type": "abandoned_shack",
+      "structure_color": "white",
+      "tokens": []
+    },
+    {
+      "q": 2,
+      "r": 4,
+      "terrain": "forest",
+      "section_id": "B",
+      "local_id": 9,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 3,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "B",
+      "local_id": 10,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 4,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "B",
+      "local_id": 11,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 5,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "B",
+      "local_id": 12,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 6,
+      "r": 4,
+      "terrain": "mountain",
+      "section_id": "E",
+      "local_id": 7,
+      "animal": "bear",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 7,
+      "r": 4,
+      "terrain": "mountain",
+      "section_id": "E",
+      "local_id": 8,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 8,
+      "r": 4,
+      "terrain": "water",
+      "section_id": "E",
+      "local_id": 9,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 9,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "E",
+      "local_id": 10,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 10,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "E",
+      "local_id": 11,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 11,
+      "r": 4,
+      "terrain": "swamp",
+      "section_id": "E",
+      "local_id": 12,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 12,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 7,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 13,
+      "r": 4,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 8,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 14,
+      "r": 4,
+      "terrain": "mountain",
+      "section_id": "D",
+      "local_id": 9,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 15,
+      "r": 4,
+      "terrain": "water",
+      "section_id": "D",
+      "local_id": 10,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 16,
+      "r": 4,
+      "terrain": "water",
+      "section_id": "D",
+      "local_id": 11,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 17,
+      "r": 4,
+      "terrain": "water",
+      "section_id": "D",
+      "local_id": 12,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 0,
+      "r": 5,
+      "terrain": "swamp",
+      "section_id": "B",
+      "local_id": 13,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 1,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "B",
+      "local_id": 14,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 2,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "B",
+      "local_id": 15,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 3,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "B",
+      "local_id": 16,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 4,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "B",
+      "local_id": 17,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 5,
+      "r": 5,
+      "terrain": "desert",
+      "section_id": "B",
+      "local_id": 18,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 6,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "E",
+      "local_id": 13,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 7,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "E",
+      "local_id": 14,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 8,
+      "r": 5,
+      "terrain": "mountain",
+      "section_id": "E",
+      "local_id": 15,
+      "animal": null,
+      "structure_type": "abandoned_shack",
+      "structure_color": "green",
+      "tokens": []
+    },
+    {
+      "q": 9,
+      "r": 5,
+      "terrain": "swamp",
+      "section_id": "E",
+      "local_id": 16,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 10,
+      "r": 5,
+      "terrain": "swamp",
+      "section_id": "E",
+      "local_id": 17,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 11,
+      "r": 5,
+      "terrain": "swamp",
+      "section_id": "E",
+      "local_id": 18,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 12,
+      "r": 5,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 13,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 13,
+      "r": 5,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 14,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 14,
+      "r": 5,
+      "terrain": "desert",
+      "section_id": "D",
+      "local_id": 15,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 15,
+      "r": 5,
+      "terrain": "forest",
+      "section_id": "D",
+      "local_id": 16,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 16,
+      "r": 5,
+      "terrain": "forest",
+      "section_id": "D",
+      "local_id": 17,
+      "animal": null,
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    },
+    {
+      "q": 17,
+      "r": 5,
+      "terrain": "forest",
+      "section_id": "D",
+      "local_id": 18,
+      "animal": "cougar",
+      "structure_type": null,
+      "structure_color": null,
+      "tokens": []
+    }
+  ],
+  "notes": "Generated from the current canonical board layout. Validate manually before using as ground truth."
+}

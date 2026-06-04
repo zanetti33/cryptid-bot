@@ -1,0 +1,269 @@
+{
+  "terrain_legend": {
+    "f": "forest",
+    "m": "mountain",
+    "w": "water",
+    "d": "desert",
+    "s": "swamp"
+  },
+  "modules": [
+    {
+      "section_id": "A",
+      "orientations": {
+        "normal": {
+          "rows": [
+            "wwwwff",
+            "sswdff",
+            "ssdddf"
+          ],
+          "animals": [
+            {
+              "local_id": 16,
+              "animal": "bear"
+            },
+            {
+              "local_id": 17,
+              "animal": "bear"
+            }
+          ]
+        },
+        "flipped": {
+          "rows": [
+            "fdddss",
+            "ffdwss",
+            "ffwwww"
+          ],
+          "animals": [
+            {
+              "local_id": 2,
+              "animal": "bear"
+            },
+            {
+              "local_id": 3,
+              "animal": "bear"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "section_id": "B",
+      "orientations": {
+        "normal": {
+          "rows": [
+            "sfffff",
+            "ssfddd",
+            "smmmmd"
+          ],
+          "animals": [
+            {
+              "local_id": 1,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 2,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 3,
+              "animal": "cougar"
+            }
+          ]
+        },
+        "flipped": {
+          "rows": [
+            "dmmmms",
+            "dddfss",
+            "fffffs"
+          ],
+          "animals": [
+            {
+              "local_id": 16,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 17,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 18,
+              "animal": "cougar"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "section_id": "C",
+      "orientations": {
+        "normal": {
+          "rows": [
+            "mmmmww",
+            "ssfmww",
+            "ssfffw"
+          ],
+          "animals": [
+            {
+              "local_id": 7,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 8,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 13,
+              "animal": "cougar"
+            }
+          ]
+        },
+        "flipped": {
+          "rows": [
+            "wwmmmm",
+            "wwmfss",
+            "wfffss"
+          ],
+          "animals": [
+            {
+              "local_id": 6,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 11,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 12,
+              "animal": "cougar"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "section_id": "D",
+      "orientations": {
+        "normal": {
+          "rows": [
+            "ddmmmm",
+            "ddmwww",
+            "dddfff"
+          ],
+          "animals": [
+            {
+              "local_id": 12,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 18,
+              "animal": "cougar"
+            }
+          ]
+        },
+        "flipped": {
+          "rows": [
+            "fffddd",
+            "wwwmdd",
+            "mmmmdd"
+          ],
+          "animals": [
+            {
+              "local_id": 1,
+              "animal": "cougar"
+            },
+            {
+              "local_id": 7,
+              "animal": "cougar"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "section_id": "E",
+      "orientations": {
+        "normal": {
+          "rows": [
+            "sssmmm",
+            "sddwmm",
+            "ddwwww"
+          ],
+          "animals": [
+            {
+              "local_id": 12,
+              "animal": "bear"
+            },
+            {
+              "local_id": 17,
+              "animal": "bear"
+            },
+            {
+              "local_id": 18,
+              "animal": "bear"
+            }
+          ]
+        },
+        "flipped": {
+          "rows": [
+            "wwwwdd",
+            "mmwdds",
+            "mmmsss"
+          ],
+          "animals": [
+            {
+              "local_id": 1,
+              "animal": "bear"
+            },
+            {
+              "local_id": 2,
+              "animal": "bear"
+            },
+            {
+              "local_id": 7,
+              "animal": "bear"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "section_id": "F",
+      "orientations": {
+        "normal": {
+          "rows": [
+            "ddsssf",
+            "mmssff",
+            "mwwwwf"
+          ],
+          "animals": [
+            {
+              "local_id": 1,
+              "animal": "bear"
+            },
+            {
+              "local_id": 7,
+              "animal": "bear"
+            }
+          ]
+        },
+        "flipped": {
+          "rows": [
+            "fwwwwm",
+            "ffssmm",
+            "fsssdd"
+          ],
+          "animals": [
+            {
+              "local_id": 12,
+              "animal": "bear"
+            },
+            {
+              "local_id": 18,
+              "animal": "cougar"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
