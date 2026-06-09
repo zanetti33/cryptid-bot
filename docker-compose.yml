@@ -1,0 +1,131 @@
+name: cryptid-bot
+
+services:
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: py-dev
+    command: ["python", "-c", "from spa_recognition.backend.http_server import run; run(host='0.0.0.0', port=8000)"]
+    ports:
+      - "${SPA_API_PORT:-8000}:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./datasets:/app/datasets
+      - ./models:/app/models
+      - ./screenshots:/app/screenshots
+
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./spa_recognition/frontend
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "${SPA_FRONTEND_DEV_PORT:-5173}:5173"
+    environment:
+      - VITE_SPA_API_BASE=${VITE_SPA_API_BASE:-http://127.0.0.1:8000}
+    volumes:
+      - ./spa_recognition/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend-dev
+
+  backend-prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: py-runtime
+    command: ["python", "-c", "from spa_recognition.backend.http_server import run; run(host='0.0.0.0', port=8000)"]
+    ports:
+      - "${SPA_API_PORT:-8000}:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./datasets:/app/datasets
+      - ./models:/app/models
+      - ./screenshots:/app/screenshots
+
+  frontend-prod:
+    profiles: ["prod"]
+    build:
+      context: ./spa_recognition/frontend
+      dockerfile: Dockerfile
+      target: prod
+      args:
+        VITE_SPA_API_BASE: ${VITE_SPA_API_BASE:-http://127.0.0.1:8000}
+    ports:
+      - "${SPA_FRONTEND_PROD_PORT:-8080}:80"
+    depends_on:
+      - backend-prod
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: py-test
+    command: ["python", "scripts/run_tests.py", "-q"]
+    volumes:
+      - ./:/app
+      - ./datasets:/app/datasets
+      - ./models:/app/models
+
+  trainer-cpu:
+    profiles: ["train"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: py-dev
+    command:
+      [
+        "python",
+        "scripts/train_module_classifier.py",
+        "--data-path",
+        "datasets/map_recognition",
+        "--output",
+        "models/module_classifier.pt"
+      ]
+    volumes:
+      - ./:/app
+      - ./datasets:/app/datasets
+      - ./models:/app/models
+
+  trainer-cuda:
+    profiles: ["train"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: py-cuda
+    command:
+      [
+        "python3",
+        "scripts/train_module_classifier.py",
+        "--data-path",
+        "datasets/map_recognition",
+        "--output",
+        "models/module_classifier.pt",
+        "--device",
+        "cuda"
+      ]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./:/app
+      - ./datasets:/app/datasets
+      - ./models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+

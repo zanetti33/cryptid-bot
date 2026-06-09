@@ -14,16 +14,18 @@ Modular Discord bot for the board game Cryptid, with clean separation between ga
 
 ## 🏗️ Architecture Overview
 
-The project is now organized into **4 independent modules**:
+The project is now organized into **5 independent modules**:
 
 ```
-game_model/     ← Core game logic (no external dependencies)
+game_model/      ← Core game logic (no external dependencies)
     ↓
-recognition/    ← Board recognition (intercambiabile)
+recognition/     ← Board recognition (interchangeable)
     ↓
-ai/             ← AI strategy engine
+ai/              ← AI strategy engine
     ↓
-discord_bot/    ← Discord UI layer (coming soon)
+spa_recognition/ ← Manual SPA state entry + AI orchestration (MVP V1)
+    ↓
+discord_bot/     ← Discord UI layer (coming soon)
 ```
 
 Each module can be tested, replaced, or extended independently.
@@ -113,6 +115,9 @@ for move in moves:
 ### `cli_recognition/` - Manual Board Input (Future)
 Alternative recognition module for interactive terminal input.
 
+### `spa_recognition/` - SPA Integration (MVP V1)
+Frontend/backend module for manual board and game state entry, plus AI orchestration through permissive API endpoints.
+
 ### `discord_bot/` - Discord Integration (Future)
 Frontend module for Discord API integration.
 
@@ -120,6 +125,7 @@ Frontend module for Discord API integration.
 
 - `rules/` - Backward compatibility wrappers (re-export from `game_model/`)
 - `map_recognition/` - Backward compatibility wrappers (re-export from `recognition/`)
+- `spa_recognition/` - SPA backend + minimal React frontend for manual board/game input
 - `data/` - Module templates, board configuration, clue definitions
 - `datasets/map_recognition/` - Labeled training images
 - `tests/` - Unit tests for all modules
@@ -157,31 +163,62 @@ Each player has a hidden clue that defines valid monster locations. Players take
 
 ## 🚀 Getting Started
 
-### Setup
+### Setup (Docker-first)
+
+Only requirement: Docker + Docker Compose.
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/Scripts/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+cp .env.example .env
+chmod +x scripts/docker/*.sh
+./scripts/docker/doctor.sh
 ```
+
+Profiles available in `docker-compose.yml`:
+- `dev` - backend + frontend with hot reload
+- `prod` - backend + static frontend via nginx
+- `test` - Python tests
+- `train` - CNN training (CUDA first, CPU fallback)
 
 ### Run Tests
 
 ```bash
-# Using test runner (recommended)
-python scripts/run_tests.py
+./scripts/docker/test.sh
+```
 
-# Or with pytest
-pytest -q tests/
+### Run Development Stack (Backend + Frontend)
+
+```bash
+./scripts/docker/dev.sh
+```
+
+Backend: `http://127.0.0.1:8000`  
+Frontend (Vite): `http://127.0.0.1:5173`
+
+Available endpoints (POST):
+- `/setup`
+- `/map`
+- `/structures`
+- `/clues`
+- `/recalculate`
+
+### Run Production-like Stack
+
+```bash
+./scripts/docker/prod.sh
+```
+
+Frontend is served by nginx on `http://127.0.0.1:8080`.
+
+### Run SPA Recognition Demo Flow (CLI)
+
+```bash
+docker compose --profile dev run --rm backend-dev python -m spa_recognition.backend.demo_runner
 ```
 
 ### Load Board from Image
 
 ```bash
-python -c "
+docker compose --profile dev run --rm backend-dev python -c "
 from recognition import image_to_board_state
 board = image_to_board_state('screenshot.png')
 print(f'Board loaded with {len(board.tiles)} tiles')
@@ -191,7 +228,7 @@ print(f'Board loaded with {len(board.tiles)} tiles')
 ### Use AI to Recommend Moves
 
 ```bash
-python -c "
+docker compose --profile dev run --rm backend-dev python -c "
 from game_model import GameSnapshot
 from ai import recommend_moves
 from recognition import image_to_board_state
@@ -210,11 +247,7 @@ for move in moves:
 Train a CNN model for better module recognition:
 
 ```bash
-python scripts/train_module_classifier.py \
-    --data-path datasets/map_recognition \
-    --epochs 50 \
-    --batch-size 32 \
-    --output models/module_classifier.pt
+./scripts/docker/train.sh --epochs 50 --batch-size 32 --output models/module_classifier.pt
 ```
 
 Then use it:
@@ -230,6 +263,8 @@ board = image_to_board_state(
 
 ## 📚 Documentation
 
+- `docs/DOCKER_WORKFLOWS.md` - Docker-first workflows (dev/prod/test/train)
+- `docs/SPA_RECOGNITION_SPEC.md` - SPA Recognition MVP specification and milestones
 - `REFACTORING_COMPLETE.md` - Full architecture documentation
 - `clues.md` - Game clues and their descriptions
 - `AGENTS.md` - Coding guidelines and practices
@@ -303,4 +338,3 @@ See `AGENTS.md` for detailed coding guidelines.
 **Status**: Core architecture complete, features in development  
 **Last Updated**: June 4, 2026  
 **Python**: 3.10+
-

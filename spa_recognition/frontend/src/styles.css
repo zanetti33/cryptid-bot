@@ -1,0 +1,52 @@
+:root {
+  color-scheme: light dark;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.toolbar,
+.mode-switcher,
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.mode-switcher button.active {
+  font-weight: bold;
+}
+
+.hex-grid {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.hex-cell {
+  min-height: 32px;
+  border: 1px solid #666;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.hex-cell.selected {
+  border: 2px solid #4caf50;
+}
+
+pre {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  overflow: auto;
+}
+
