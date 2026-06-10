@@ -17,7 +17,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path not in {"/setup", "/map", "/structures", "/clues", "/recalculate"}:
+        if self.path not in {"/setup", "/board-layout", "/map", "/structures", "/clues", "/recalculate"}:
             self._send_json({"error": f"Unknown path: {self.path}"}, HTTPStatus.NOT_FOUND)
             return
 

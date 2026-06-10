@@ -101,10 +101,16 @@ def test_session_to_dict_is_serializable() -> None:
 
 
 def test_setup_state_to_dict_converts_tuples_to_lists() -> None:
-    setup = SetupState(player_ids=("a", "b"), turn_order=("a", "b"), bot_player_id="a")
+    setup = SetupState(
+        player_ids=("a", "b"),
+        turn_order=("a", "b"),
+        bot_player_id="a",
+        bot_clue_id="terrain_pair_forest_desert",
+    )
     d = setup.to_dict()
     assert isinstance(d["player_ids"], list)
     assert isinstance(d["turn_order"], list)
+    assert d["bot_clue_id"] == "terrain_pair_forest_desert"
 
 
 def test_map_state_default_is_108_tiles() -> None:

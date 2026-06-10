@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional, Tuple
 
-WarningScope = Literal["setup", "map", "structures", "clues", "recalculate", "session"]
+WarningScope = Literal["setup", "board_layout", "map", "structures", "clues", "recalculate", "session"]
 WarningSeverity = Literal["info", "warn", "error"]
-SessionPhase = Literal["setup", "map", "structures", "clues", "review"]
+SessionPhase = Literal["setup", "board_layout", "map", "structures", "clues", "review"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -33,12 +33,14 @@ class SetupState:
     player_ids: Tuple[str, ...] = ()
     turn_order: Tuple[str, ...] = ()
     bot_player_id: Optional[str] = None
+    bot_clue_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "player_ids": list(self.player_ids),
             "turn_order": list(self.turn_order),
             "bot_player_id": self.bot_player_id,
+            "bot_clue_id": self.bot_clue_id,
         }
 
 
@@ -53,6 +55,24 @@ class MapState:
             "cols": self.cols,
             "rows": self.rows,
             "observed_tokens": [dict(entry) for entry in self.observed_tokens],
+        }
+
+
+@dataclass(slots=True)
+class BoardLayoutState:
+    placements: Tuple[Dict[str, Any], ...] = ()
+    board_tiles: Tuple[Dict[str, Any], ...] = ()
+    cols: int = 12
+    rows: int = 9
+    is_complete: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "placements": [dict(entry) for entry in self.placements],
+            "board_tiles": [dict(entry) for entry in self.board_tiles],
+            "cols": self.cols,
+            "rows": self.rows,
+            "is_complete": self.is_complete,
         }
 
 
@@ -95,6 +115,7 @@ class SessionState:
     session_id: str
     phase: SessionPhase = "setup"
     setup: SetupState = field(default_factory=SetupState)
+    board_layout_state: BoardLayoutState = field(default_factory=BoardLayoutState)
     map_state: MapState = field(default_factory=MapState)
     structures_state: StructuresState = field(default_factory=StructuresState)
     clues_state: CluesState = field(default_factory=CluesState)
@@ -107,6 +128,7 @@ class SessionState:
             "session_id": self.session_id,
             "phase": self.phase,
             "setup": self.setup,
+            "board_layout_state": self.board_layout_state,
             "map_state": self.map_state,
             "structures_state": self.structures_state,
             "clues_state": self.clues_state,
@@ -122,6 +144,7 @@ class SessionState:
             "session_id": self.session_id,
             "phase": self.phase,
             "setup": self.setup.to_dict(),
+            "board_layout_state": self.board_layout_state.to_dict(),
             "map_state": self.map_state.to_dict(),
             "structures_state": self.structures_state.to_dict(),
             "clues_state": self.clues_state.to_dict(),
