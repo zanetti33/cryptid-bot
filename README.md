@@ -269,20 +269,6 @@ board = image_to_board_state(
 - `clues.md` - Game clues and their descriptions
 - `AGENTS.md` - Coding guidelines and practices
 
-## 🔄 Backward Compatibility
-
-Old code continues to work without changes:
-
-```python
-# Old style (still works)
-from rules import Board, Game
-from rules.clues import build_clue_catalog
-
-# New style (recommended)
-from game_model import Board, Game
-from game_model.clues import build_clue_catalog
-```
-
 ## 🧪 Testing Examples
 
 ```python
@@ -311,16 +297,6 @@ from recognition import image_to_board_state
 board = image_to_board_state("test_image.png")
 assert len(board.tiles) == 108
 ```
-
-## 🚧 Roadmap
-
-- [ ] Implement CLI recognition module
-- [ ] Implement Discord bot integration
-- [ ] Add move execution via Discord reactions
-- [ ] Add game persistence (save/load)
-- [ ] Add multi-table support
-- [ ] Add player rating system
-- [ ] Create web UI alternative frontend
 
 ## 📝 Development Principles
 
