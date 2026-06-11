@@ -1,8 +1,8 @@
 from ai.strategy import recommend_moves
-from rules.map import Board
-from rules.state import GameSnapshot
-from rules.tokens import GameState
-from rules.types import TokenType
+from game_model.map import Board
+from game_model.state import GameSnapshot
+from game_model.tokens import GameState
+from game_model.types import TokenType
 
 
 def _tile_id(board: Board, q: int, r: int) -> int:

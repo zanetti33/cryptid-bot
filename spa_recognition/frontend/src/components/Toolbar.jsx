@@ -1,7 +1,5 @@
 export function Toolbar({
   phase,
-  onRecalculate,
-  isBusy,
   hasBoardLayout,
   showAnimals,
   showStructures,
@@ -23,9 +21,6 @@ export function Toolbar({
       <label className="toggle-item">
         <input type="checkbox" checked={showTokens} onChange={onToggleTokens} /> Tokens
       </label>
-      <button onClick={onRecalculate} disabled={isBusy || !hasBoardLayout}>
-        {isBusy ? "Recalculating..." : "Recalculate AI"}
-      </button>
     </div>
   );
 }

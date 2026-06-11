@@ -9,7 +9,7 @@ This project has the objective of creating a Discord bot that can play the board
 The bot uses screenshots of the board state to determine its next action.
 
 The project is structured as follows:
-- `rules/`: This directory contains the implementation of the game rules and logic for processing the board state.
+- `game_model/`: This directory contains the implementation of the game rules and logic for processing the board state.
 - `ai/`: This directory contains the implementation of the bot's decision-making agents.
 - `discord/`: This directory contains the implementation of the bot's interaction with the Discord API.
 - `data/`: This directory contains any necessary data files, such as the list of possible clues and their corresponding board states.
@@ -18,9 +18,11 @@ The project is structured as follows:
 - `main.py`: This is the main entry point for the bot, where it connects to Discord and listens for game events.
 - `utils/`: This directory contains utility functions.
 - `screenshots/`: This directory is used to store screenshots of the board state for analysis.
+- `spa_recognition/`: This directory contains the implementation of a Single Page Application (SPA) frontend for the bot, 
+allowing users to interact with it and view its decision-making process.
 
 What needs to be done:
-1. Implement the game logic/model for the bot in the `rules/` and `data/` directories. This will involve analyzing the board state and determining the best move based on the current game situation.
+1. Implement the game logic/model for the bot in the `game_model/` and `data/` directories. This will involve analyzing the board state and determining the best move based on the current game situation.
    - The game rules:
       - Each player has a different hidden information on the monster location on the board that they are trying to hide.
       - Players take turns clockwise asking two type of questions:
@@ -43,5 +45,6 @@ This will involve creating algorithms that can analyze the board state and make 
 We want to evaluate all the possible hidden information of all others players, if we know for sure the location we can ask "Is the monster in this location?" to win, otherwise we can ask "Could the monster be in this location?" to narrow down the possibilities.
 3. Connect the bot to Discord and implement the necessary functionality to listen for game events and respond accordingly. This will involve using the Discord API to interact with the game and other players.
 4. Implement the image recognition system in the `map_recognition/` directory to process screenshots of the board state and extract relevant information for the bot's decision-making. This will involve using computer vision techniques to analyze the screenshots and identify the different tiles, clues, and player actions.
-5. Write unit tests for the various components of the bot to ensure that they are functioning correctly
-6. Document the code and provide clear instructions for how to set up and use the bot on Discord. This will involve writing a README file and providing any necessary documentation for the different components of the bot.
+5. Implement a SPA (Single Page Application) frontend for the bot to allow users to interact with it and view its decision-making process. This will involve creating a user interface that displays the current board state, the bot's analysis, and its recommended moves.
+6. Write unit tests for the various components of the bot to ensure that they are functioning correctly
+7. Document the code and provide clear instructions for how to set up and use the bot on Discord. This will involve writing a README file and providing any necessary documentation for the different components of the bot.

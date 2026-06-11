@@ -2,9 +2,9 @@
   "slots": [
     { "slot_id": 1, "origin_q": 0, "origin_r": 0 },
     { "slot_id": 2, "origin_q": 6, "origin_r": 0 },
-    { "slot_id": 3, "origin_q": 12, "origin_r": 0 },
-    { "slot_id": 4, "origin_q": 0, "origin_r": 3 },
-    { "slot_id": 5, "origin_q": 6, "origin_r": 3 },
-    { "slot_id": 6, "origin_q": 12, "origin_r": 3 }
+    { "slot_id": 3, "origin_q": 0, "origin_r": 3 },
+    { "slot_id": 4, "origin_q": 6, "origin_r": 3 },
+    { "slot_id": 5, "origin_q": 0, "origin_r": 6 },
+    { "slot_id": 6, "origin_q": 6, "origin_r": 6 }
   ]
 }

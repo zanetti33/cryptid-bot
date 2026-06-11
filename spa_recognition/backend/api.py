@@ -43,6 +43,8 @@ class SpaRecognitionApi:
             return self.post_structures(payload)
         if path == "/clues":
             return self.post_clues(payload)
+        if path == "/ask-ai":
+            return self.post_ask_ai(payload)
         if path == "/recalculate":
             return self.post_recalculate(payload)
         raise ValueError(f"Unknown path: {path}")
@@ -134,6 +136,8 @@ class SpaRecognitionApi:
         current = self._store.create_or_get(session_id)
 
         local_warnings: List[WarningItem] = []
+        raw_layout_mode = data.get("layout_mode", current.board_layout_state.layout_mode)
+        layout_mode = "bootstrap" if raw_layout_mode == "bootstrap" else "manual"
         raw_placements = data.get("placements", [])
         if raw_placements is None:
             raw_placements = []
@@ -229,7 +233,10 @@ class SpaRecognitionApi:
             )
         else:
             try:
-                board = _compose_board_from_placements(ordered_placements)
+                board = _compose_board_from_placements(
+                    ordered_placements,
+                    include_structure_markers=layout_mode == "bootstrap",
+                )
                 board_tiles = tuple(_serialize_board_tile(tile) for tile in _sorted_tiles(board))
                 board_cols, board_rows = board.bounds()
             except Exception as exc:  # pragma: no cover - defensive fallback
@@ -248,10 +255,13 @@ class SpaRecognitionApi:
             cols=board_cols,
             rows=board_rows,
             is_complete=is_complete and bool(board_tiles),
+            layout_mode=layout_mode,
         )
+        reset_structures_state = StructuresState(by_tile_id={})
         merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
         updated = current.with_updates(
             board_layout_state=updated_layout,
+            structures_state=reset_structures_state,
             phase="map" if updated_layout.is_complete else "board_layout",
             warnings=merged_warnings,
         )
@@ -281,7 +291,7 @@ class SpaRecognitionApi:
             rows = _positive_int(data.get("rows"), current.map_state.rows, local_warnings, "map", "rows")
             max_tile_id = (cols * rows) - 1
 
-        observed_tokens: List[Dict[str, Any]] = []
+        observed_tokens_by_tile_player: Dict[Tuple[int, str], Dict[str, Any]] = {}
         raw_tokens = data.get("observed_tokens", [])
         if raw_tokens is None:
             raw_tokens = []
@@ -316,13 +326,14 @@ class SpaRecognitionApi:
                 local_warnings.append(_warning("TOKEN_TYPE_UNKNOWN", "token_type must be round or cube.", "map", "warn"))
                 continue
 
-            observed_tokens.append(
-                {
-                    "tile_id": tile_id,
-                    "player_id": player_id.strip(),
-                    "token_type": token_type.value,
-                }
-            )
+            normalized_player_id = player_id.strip()
+            observed_tokens_by_tile_player[(tile_id, normalized_player_id)] = {
+                "tile_id": tile_id,
+                "player_id": normalized_player_id,
+                "token_type": token_type.value,
+            }
+
+        observed_tokens = list(observed_tokens_by_tile_player.values())
 
         updated_map = MapState(cols=cols, rows=rows, observed_tokens=tuple(observed_tokens))
         merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
@@ -336,6 +347,20 @@ class SpaRecognitionApi:
         current = self._store.create_or_get(session_id)
 
         local_warnings: List[WarningItem] = []
+        if current.board_layout_state.layout_mode == "bootstrap":
+            local_warnings.append(
+                _warning(
+                    "STRUCTURES_LOCKED",
+                    "Structure editing is disabled for bootstrap layout mode.",
+                    "structures",
+                    "warn",
+                )
+            )
+            merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
+            updated = current.with_updates(warnings=merged_warnings)
+            self._store.upsert(updated)
+            return ApiResult(session=updated, warnings=merged_warnings)
+
         max_tile_id = (current.map_state.cols * current.map_state.rows) - 1
         next_map = dict(current.structures_state.by_tile_id)
 
@@ -362,6 +387,13 @@ class SpaRecognitionApi:
                         "warn",
                     )
                 )
+                continue
+
+            if entry.get("remove") is True:
+                next_map[tile_id] = {
+                    "structure_type": None,
+                    "structure_color": None,
+                }
                 continue
 
             structure_type = _coerce_structure_type(entry.get("structure_type"))
@@ -442,6 +474,81 @@ class SpaRecognitionApi:
         self._store.upsert(updated)
         return ApiResult(session=updated, warnings=merged_warnings)
 
+    def post_ask_ai(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
+        data = payload or {}
+        session_id = str(data.get("session_id", "default"))
+        current = self._store.create_or_get(session_id)
+
+        local_warnings: List[WarningItem] = []
+        tile_id = _coerce_int(data.get("tile_id"), -1)
+        if tile_id < 0:
+            local_warnings.append(_warning("AI_TILE_INVALID", "tile_id must be valid.", "recalculate", "warn"))
+
+        player_id = _optional_string(data.get("player_id"), None)
+        if player_id is None:
+            local_warnings.append(_warning("AI_PLAYER_MISSING", "player_id is required.", "recalculate", "warn"))
+
+        snapshot, adapter_warnings = _build_snapshot_from_session(current)
+        local_warnings.extend(adapter_warnings)
+
+        token_type = TokenType.CUBE
+        rationale = "No candidate matched; cube placed as a conservative answer."
+        if tile_id >= 0:
+            try:
+                hypothesis_space = infer_hypothesis_space(snapshot=snapshot)
+                if tile_id in set(hypothesis_space.global_candidate_tiles()):
+                    token_type = TokenType.ROUND
+                    rationale = "Tile is compatible with the current hypothesis space; round placed."
+                else:
+                    rationale = "Tile is not compatible with the current hypothesis space; cube placed."
+            except Exception as exc:  # pragma: no cover - defensive fallback
+                local_warnings.append(
+                    _warning(
+                        "AI_RECALCULATE_FAILED",
+                        f"AI evaluation failed: {exc}",
+                        "recalculate",
+                        "error",
+                    )
+                )
+
+        if tile_id >= 0 and player_id is not None:
+            filtered_tokens = [
+                token
+                for token in current.map_state.observed_tokens
+                if not (
+                    _coerce_int(token.get("tile_id"), -1) == tile_id
+                    and token.get("player_id") == player_id
+                )
+            ]
+            filtered_tokens.append(
+                {
+                    "tile_id": tile_id,
+                    "player_id": player_id,
+                    "token_type": token_type.value,
+                }
+            )
+            updated_map = MapState(
+                cols=current.map_state.cols,
+                rows=current.map_state.rows,
+                observed_tokens=tuple(filtered_tokens),
+            )
+        else:
+            updated_map = current.map_state
+
+        merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
+        updated = current.with_updates(map_state=updated_map, phase=current.phase, warnings=merged_warnings)
+        self._store.upsert(updated)
+        return ApiResult(
+            session=updated,
+            warnings=merged_warnings,
+            data={
+                "tile_id": tile_id,
+                "player_id": player_id,
+                "token_type": token_type.value,
+                "rationale": rationale,
+            },
+        )
+
     def post_recalculate(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
         data = payload or {}
         session_id = str(data.get("session_id", "default"))
@@ -521,8 +628,15 @@ def _build_snapshot_from_session(session: SessionState) -> Tuple[GameSnapshot, L
                 )
             )
             continue
-        structure_type = _coerce_structure_type(structure.get("structure_type"))
-        structure_color = _coerce_structure_color(structure.get("structure_color"))
+        structure_type_value = structure.get("structure_type")
+        structure_color_value = structure.get("structure_color")
+        if structure_type_value is None and structure_color_value is None:
+            tile.structure_type = None
+            tile.structure_color = None
+            continue
+
+        structure_type = _coerce_structure_type(structure_type_value)
+        structure_color = _coerce_structure_color(structure_color_value)
         if structure_type is None or structure_color is None:
             warnings.append(
                 _warning(
@@ -618,7 +732,10 @@ def _build_clues_catalog() -> List[Dict[str, str]]:
     return clues
 
 
-def _compose_board_from_placements(placements: Iterable[Dict[str, Any]]) -> Board:
+def _compose_board_from_placements(
+    placements: Iterable[Dict[str, Any]],
+    include_structure_markers: bool = True,
+) -> Board:
     templates = load_module_templates()
     slots = load_slots()
     layout_instance = load_layout_instance()
@@ -658,13 +775,14 @@ def _compose_board_from_placements(placements: Iterable[Dict[str, Any]]) -> Boar
             section_local_index[(section_id, local_id)] = tile
             tile_id += 1
 
-    for marker in structure_markers:
-        key = (marker["section_id"], marker["local_id"])
-        tile = section_local_index.get(key)
-        if tile is None:
-            continue
-        tile.structure_type = marker["structure_type"]
-        tile.structure_color = marker["structure_color"]
+    if include_structure_markers:
+        for marker in structure_markers:
+            key = (marker["section_id"], marker["local_id"])
+            tile = section_local_index.get(key)
+            if tile is None:
+                continue
+            tile.structure_type = marker["structure_type"]
+            tile.structure_color = marker["structure_color"]
 
     return Board(tiles=tiles)
 

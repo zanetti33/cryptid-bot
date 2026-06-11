@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterable, List
 
 from PIL import Image
 
-from rules.map import Board
+from game_model.map import Board
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MAP_RECOGNITION_DATASET_DIR = PROJECT_ROOT / "datasets" / "map_recognition"

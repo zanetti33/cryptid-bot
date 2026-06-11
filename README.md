@@ -307,10 +307,3 @@ assert len(board.tiles) == 108
 - **Documentation**: Clear code with meaningful comments
 
 See `AGENTS.md` for detailed coding guidelines.
-
----
-
-**Project**: Cryptid Bot  
-**Status**: Core architecture complete, features in development  
-**Last Updated**: June 4, 2026  
-**Python**: 3.10+

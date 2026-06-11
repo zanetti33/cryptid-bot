@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 from map_recognition.board_extractor import ExtractedBoard
 from map_recognition.layout_recognizer import LayoutRecognitionResult
 from map_recognition.tile_classifier import TerrainPrediction
-from rules.types import TerrainType
+from game_model.types import TerrainType
 
 Coord = Tuple[int, int]
 

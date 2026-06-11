@@ -19,10 +19,14 @@ const STRUCTURE_COLOR_CLASSES = {
   black: "structure-black",
 };
 
-const ANIMAL_ICONS = {
-  bear: "🐻",
-  cougar: "🐆",
+const ANIMAL_BORDER_CLASSES = {
+  bear: "animal-bear",
+  cougar: "animal-cougar",
 };
+
+function getAnimalClass(animal) {
+  return ANIMAL_BORDER_CLASSES[animal] || "";
+}
 
 function getContrastColor(terrain) {
   return terrain === "desert" ? "#1f1f1f" : "#ffffff";
@@ -49,10 +53,15 @@ function computeGridSize(tiles, fallbackCols, fallbackRows) {
   return { cols: maxQ + 1, rows: maxR + 1 };
 }
 
+function playerTokenLabel(playerId, playerLabelsById) {
+  return playerLabelsById?.[playerId] || playerId;
+}
+
 export function ClickableHexMap({
   cols = 12,
   rows = 9,
   tiles = [],
+  playerLabelsById = {},
   selectedTileId,
   onTileClick,
   disabled = false,
@@ -74,19 +83,22 @@ export function ClickableHexMap({
         const isSelected = tile.tile_id === selectedTileId;
         const terrain = tile.terrain || "unknown";
         const animal = tile.animal || null;
+        const animalClass = showAnimals && animal ? getAnimalClass(animal) : "";
         const structureType = tile.structure_type || null;
         const structureColor = tile.structure_color || null;
         const roundTokenCount = tile.round_token_count || 0;
         const cubeTokenCount = tile.cube_token_count || 0;
         const roundTokens = tile.round_tokens || [];
         const cubeTokens = tile.cube_tokens || [];
+        const roundTokenLabels = roundTokens.map((playerId) => `${playerTokenLabel(playerId, playerLabelsById)}:${playerId}`);
+        const cubeTokenLabels = cubeTokens.map((playerId) => `${playerTokenLabel(playerId, playerLabelsById)}:${playerId}`);
         const tokenTitle = showTokens
-          ? ` | round: ${roundTokenCount} (${roundTokens.join(", ") || "-"}) | cube: ${cubeTokenCount} (${cubeTokens.join(", ") || "-"})`
+          ? ` | round: ${roundTokenCount} (${roundTokenLabels.join(", ") || "-"}) | cube: ${cubeTokenCount} (${cubeTokenLabels.join(", ") || "-"})`
           : "";
         return (
           <button
             key={tile.tile_id}
-            className={`hex-cell ${isSelected ? "selected" : ""}`}
+            className={`hex-cell ${animalClass} ${isSelected ? "selected" : ""}`}
             onClick={() => onTileClick(tile.tile_id)}
             title={`Tile ${tile.tile_id} · ${terrain}${tokenTitle}`}
             disabled={disabled}
@@ -99,34 +111,30 @@ export function ClickableHexMap({
               transform: (tile.q ?? 0) % 2 === 1 ? "translateY(50%)" : undefined,
             }}
           >
-            <div className="hex-top-row">
-              <span className="hex-tile-id">#{tile.tile_id}</span>
+            <span className="overlay-icons overlay-icons-tight">
               {showTokens ? (
                 <span className="token-stack">
-                  {roundTokenCount > 0 ? <span className="token-badge token-round">● {roundTokenCount}</span> : null}
-                  {cubeTokenCount > 0 ? <span className="token-badge token-cube">■ {cubeTokenCount}</span> : null}
+                  {roundTokens.map((playerId) => (
+                    <span key={`round-${tile.tile_id}-${playerId}`} className="token-badge token-round">
+                      ●{playerTokenLabel(playerId, playerLabelsById)}
+                    </span>
+                  ))}
+                  {cubeTokens.map((playerId) => (
+                    <span key={`cube-${tile.tile_id}-${playerId}`} className="token-badge token-cube">
+                      ■{playerTokenLabel(playerId, playerLabelsById)}
+                    </span>
+                  ))}
                 </span>
               ) : null}
-            </div>
-
-            <span className="hex-tile-terrain">{terrain}</span>
-
-            <div className="hex-bottom-row">
-              <span className="hex-tile-section">{tile.section_id ? `${tile.section_id}-${tile.local_id}` : ""}</span>
-              <span className="overlay-icons">
-                {showAnimals && animal ? (
-                  <span className="animal-icon" title={animal}>{ANIMAL_ICONS[animal] || "?"}</span>
-                ) : null}
-                {showStructures && structureType ? (
-                  <span
-                    className={`structure-icon ${STRUCTURE_COLOR_CLASSES[structureColor] || ""}`}
-                    title={`${structureType} (${structureColor || "unknown"})`}
-                  >
-                    {STRUCTURE_ICONS[structureType] || "◆"}
-                  </span>
-                ) : null}
-              </span>
-            </div>
+              {showStructures && structureType ? (
+                <span
+                  className={`structure-icon ${STRUCTURE_COLOR_CLASSES[structureColor] || ""}`}
+                  title={`${structureType} (${structureColor || "unknown"})`}
+                >
+                  {STRUCTURE_ICONS[structureType] || "◆"}
+                </span>
+              ) : null}
+            </span>
           </button>
         );
       })}

@@ -1,0 +1,141 @@
+Toolbar.jsx:13 Uncaught ReferenceError: hasBoardLayout is not defined
+    at Toolbar (Toolbar.jsx:13:21)
+    at renderWithHooks (chunk-373CG7ZK.js?v=bd362ef2:11546:26)
+    at mountIndeterminateComponent (chunk-373CG7ZK.js?v=bd362ef2:14924:21)
+    at beginWork (chunk-373CG7ZK.js?v=bd362ef2:15912:22)
+    at HTMLUnknownElement.callCallback2 (chunk-373CG7ZK.js?v=bd362ef2:3672:22)
+    at Object.invokeGuardedCallbackDev (chunk-373CG7ZK.js?v=bd362ef2:3697:24)
+    at invokeGuardedCallback (chunk-373CG7ZK.js?v=bd362ef2:3731:39)
+    at beginWork$1 (chunk-373CG7ZK.js?v=bd362ef2:19763:15)
+    at performUnitOfWork (chunk-373CG7ZK.js?v=bd362ef2:19196:20)
+    at workLoopSync (chunk-373CG7ZK.js?v=bd362ef2:19135:13)
+(anonymous) @ Toolbar.jsx:13
+renderWithHooks @ chunk-373CG7ZK.js?v=bd362ef2:11546
+mountIndeterminateComponent @ chunk-373CG7ZK.js?v=bd362ef2:14924
+beginWork @ chunk-373CG7ZK.js?v=bd362ef2:15912
+callCallback2 @ chunk-373CG7ZK.js?v=bd362ef2:3672
+invokeGuardedCallbackDev @ chunk-373CG7ZK.js?v=bd362ef2:3697
+invokeGuardedCallback @ chunk-373CG7ZK.js?v=bd362ef2:3731
+beginWork$1 @ chunk-373CG7ZK.js?v=bd362ef2:19763
+performUnitOfWork @ chunk-373CG7ZK.js?v=bd362ef2:19196
+workLoopSync @ chunk-373CG7ZK.js?v=bd362ef2:19135
+renderRootSync @ chunk-373CG7ZK.js?v=bd362ef2:19114
+performConcurrentWorkOnRoot @ chunk-373CG7ZK.js?v=bd362ef2:18676
+workLoop @ chunk-373CG7ZK.js?v=bd362ef2:195
+flushWork @ chunk-373CG7ZK.js?v=bd362ef2:174
+performWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:382
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:405
+requestHostCallback @ chunk-373CG7ZK.js?v=bd362ef2:416
+unstable_scheduleCallback @ chunk-373CG7ZK.js?v=bd362ef2:328
+scheduleCallback$1 @ chunk-373CG7ZK.js?v=bd362ef2:19824
+ensureRootIsScheduled @ chunk-373CG7ZK.js?v=bd362ef2:18650
+scheduleUpdateOnFiber @ chunk-373CG7ZK.js?v=bd362ef2:18560
+updateContainer @ chunk-373CG7ZK.js?v=bd362ef2:20774
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-373CG7ZK.js?v=bd362ef2:21114
+(anonymous) @ main.jsx:7Understand this error
+Toolbar.jsx:13 Uncaught ReferenceError: hasBoardLayout is not defined
+    at Toolbar (Toolbar.jsx:13:21)
+    at renderWithHooks (chunk-373CG7ZK.js?v=bd362ef2:11546:26)
+    at mountIndeterminateComponent (chunk-373CG7ZK.js?v=bd362ef2:14924:21)
+    at beginWork (chunk-373CG7ZK.js?v=bd362ef2:15912:22)
+    at HTMLUnknownElement.callCallback2 (chunk-373CG7ZK.js?v=bd362ef2:3672:22)
+    at Object.invokeGuardedCallbackDev (chunk-373CG7ZK.js?v=bd362ef2:3697:24)
+    at invokeGuardedCallback (chunk-373CG7ZK.js?v=bd362ef2:3731:39)
+    at beginWork$1 (chunk-373CG7ZK.js?v=bd362ef2:19763:15)
+    at performUnitOfWork (chunk-373CG7ZK.js?v=bd362ef2:19196:20)
+    at workLoopSync (chunk-373CG7ZK.js?v=bd362ef2:19135:13)
+(anonymous) @ Toolbar.jsx:13
+renderWithHooks @ chunk-373CG7ZK.js?v=bd362ef2:11546
+mountIndeterminateComponent @ chunk-373CG7ZK.js?v=bd362ef2:14924
+beginWork @ chunk-373CG7ZK.js?v=bd362ef2:15912
+callCallback2 @ chunk-373CG7ZK.js?v=bd362ef2:3672
+invokeGuardedCallbackDev @ chunk-373CG7ZK.js?v=bd362ef2:3697
+invokeGuardedCallback @ chunk-373CG7ZK.js?v=bd362ef2:3731
+beginWork$1 @ chunk-373CG7ZK.js?v=bd362ef2:19763
+performUnitOfWork @ chunk-373CG7ZK.js?v=bd362ef2:19196
+workLoopSync @ chunk-373CG7ZK.js?v=bd362ef2:19135
+renderRootSync @ chunk-373CG7ZK.js?v=bd362ef2:19114
+recoverFromConcurrentError @ chunk-373CG7ZK.js?v=bd362ef2:18734
+performConcurrentWorkOnRoot @ chunk-373CG7ZK.js?v=bd362ef2:18682
+workLoop @ chunk-373CG7ZK.js?v=bd362ef2:195
+flushWork @ chunk-373CG7ZK.js?v=bd362ef2:174
+performWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:382
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:405
+requestHostCallback @ chunk-373CG7ZK.js?v=bd362ef2:416
+unstable_scheduleCallback @ chunk-373CG7ZK.js?v=bd362ef2:328
+scheduleCallback$1 @ chunk-373CG7ZK.js?v=bd362ef2:19824
+ensureRootIsScheduled @ chunk-373CG7ZK.js?v=bd362ef2:18650
+scheduleUpdateOnFiber @ chunk-373CG7ZK.js?v=bd362ef2:18560
+updateContainer @ chunk-373CG7ZK.js?v=bd362ef2:20774
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-373CG7ZK.js?v=bd362ef2:21114
+(anonymous) @ main.jsx:7Understand this error
+chunk-373CG7ZK.js?v=bd362ef2:14030 The above error occurred in the <Toolbar> component:
+
+    at Toolbar (http://localhost:5173/src/components/Toolbar.jsx:18:3)
+    at main
+    at App (http://localhost:5173/src/App.jsx:107:27)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-373CG7ZK.js?v=bd362ef2:14030
+update.callback @ chunk-373CG7ZK.js?v=bd362ef2:14050
+callCallback @ chunk-373CG7ZK.js?v=bd362ef2:11246
+commitUpdateQueue @ chunk-373CG7ZK.js?v=bd362ef2:11263
+commitLayoutEffectOnFiber @ chunk-373CG7ZK.js?v=bd362ef2:17091
+commitLayoutMountEffects_complete @ chunk-373CG7ZK.js?v=bd362ef2:17978
+commitLayoutEffects_begin @ chunk-373CG7ZK.js?v=bd362ef2:17967
+commitLayoutEffects @ chunk-373CG7ZK.js?v=bd362ef2:17918
+commitRootImpl @ chunk-373CG7ZK.js?v=bd362ef2:19351
+commitRoot @ chunk-373CG7ZK.js?v=bd362ef2:19275
+finishConcurrentRender @ chunk-373CG7ZK.js?v=bd362ef2:18758
+performConcurrentWorkOnRoot @ chunk-373CG7ZK.js?v=bd362ef2:18716
+workLoop @ chunk-373CG7ZK.js?v=bd362ef2:195
+flushWork @ chunk-373CG7ZK.js?v=bd362ef2:174
+performWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:382
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:405
+requestHostCallback @ chunk-373CG7ZK.js?v=bd362ef2:416
+unstable_scheduleCallback @ chunk-373CG7ZK.js?v=bd362ef2:328
+scheduleCallback$1 @ chunk-373CG7ZK.js?v=bd362ef2:19824
+ensureRootIsScheduled @ chunk-373CG7ZK.js?v=bd362ef2:18650
+scheduleUpdateOnFiber @ chunk-373CG7ZK.js?v=bd362ef2:18560
+updateContainer @ chunk-373CG7ZK.js?v=bd362ef2:20774
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-373CG7ZK.js?v=bd362ef2:21114
+(anonymous) @ main.jsx:7Understand this error
+chunk-373CG7ZK.js?v=bd362ef2:19411 Uncaught ReferenceError: hasBoardLayout is not defined
+    at Toolbar (Toolbar.jsx:13:21)
+    at renderWithHooks (chunk-373CG7ZK.js?v=bd362ef2:11546:26)
+    at mountIndeterminateComponent (chunk-373CG7ZK.js?v=bd362ef2:14924:21)
+    at beginWork (chunk-373CG7ZK.js?v=bd362ef2:15912:22)
+    at beginWork$1 (chunk-373CG7ZK.js?v=bd362ef2:19751:22)
+    at performUnitOfWork (chunk-373CG7ZK.js?v=bd362ef2:19196:20)
+    at workLoopSync (chunk-373CG7ZK.js?v=bd362ef2:19135:13)
+    at renderRootSync (chunk-373CG7ZK.js?v=bd362ef2:19114:15)
+    at recoverFromConcurrentError (chunk-373CG7ZK.js?v=bd362ef2:18734:28)
+    at performConcurrentWorkOnRoot (chunk-373CG7ZK.js?v=bd362ef2:18682:30)
+(anonymous) @ Toolbar.jsx:13
+renderWithHooks @ chunk-373CG7ZK.js?v=bd362ef2:11546
+mountIndeterminateComponent @ chunk-373CG7ZK.js?v=bd362ef2:14924
+beginWork @ chunk-373CG7ZK.js?v=bd362ef2:15912
+beginWork$1 @ chunk-373CG7ZK.js?v=bd362ef2:19751
+performUnitOfWork @ chunk-373CG7ZK.js?v=bd362ef2:19196
+workLoopSync @ chunk-373CG7ZK.js?v=bd362ef2:19135
+renderRootSync @ chunk-373CG7ZK.js?v=bd362ef2:19114
+recoverFromConcurrentError @ chunk-373CG7ZK.js?v=bd362ef2:18734
+performConcurrentWorkOnRoot @ chunk-373CG7ZK.js?v=bd362ef2:18682
+workLoop @ chunk-373CG7ZK.js?v=bd362ef2:195
+flushWork @ chunk-373CG7ZK.js?v=bd362ef2:174
+performWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:382
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-373CG7ZK.js?v=bd362ef2:405
+requestHostCallback @ chunk-373CG7ZK.js?v=bd362ef2:416
+unstable_scheduleCallback @ chunk-373CG7ZK.js?v=bd362ef2:328
+scheduleCallback$1 @ chunk-373CG7ZK.js?v=bd362ef2:19824
+ensureRootIsScheduled @ chunk-373CG7ZK.js?v=bd362ef2:18650
+scheduleUpdateOnFiber @ chunk-373CG7ZK.js?v=bd362ef2:18560
+updateContainer @ chunk-373CG7ZK.js?v=bd362ef2:20774
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-373CG7ZK.js?v=bd362ef2:21114
+(anonymous) @ main.jsx:7Understand this error
+VM826 vendor.js:159 Uncaught (in promise) Error: Uncaught Error: No Listener: tabs:outgoing.message.ready

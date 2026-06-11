@@ -9,7 +9,7 @@ def _default_board_layout():
     return [
         {"slot_id": 1, "section_id": "C", "orientation": "normal"},
         {"slot_id": 2, "section_id": "A", "orientation": "flipped"},
-        {"slot_id": 3, "section_id": "F", "orientation": "normal"},
+        {"slot_id": 3, "section_id":  "F", "orientation": "normal"},
         {"slot_id": 4, "section_id": "B", "orientation": "normal"},
         {"slot_id": 5, "section_id": "E", "orientation": "flipped"},
         {"slot_id": 6, "section_id": "D", "orientation": "normal"},
@@ -134,6 +134,247 @@ def test_spa_structures_and_clues_are_stored() -> None:
 
     assert clues_result["session"]["phase"] == "review"
     assert clues_result["session"]["clues_state"]["by_player_id"]["alpha"]["notes"] == ["possible clue A"]
+
+
+def test_spa_structures_can_be_removed_with_explicit_flag() -> None:
+    api = SpaRecognitionApi()
+    api.post(
+        "/setup",
+        {
+            "session_id": "s5",
+            "player_ids": ["alpha"],
+            "turn_order": ["alpha"],
+            "bot_player_id": "alpha",
+            "bot_clue_id": "terrain_pair_forest_desert",
+        },
+    )
+    api.post("/board-layout", {"session_id": "s5", "placements": _default_board_layout()})
+    api.post("/map", {"session_id": "s5"})
+
+    api.post("/structures", {
+        "session_id": "s5",
+        "structures": [
+            {"tile_id": 0, "structure_type": "standing_stone", "structure_color": "white"},
+        ],
+    })
+
+    removed = api.post("/structures", {
+        "session_id": "s5",
+        "structures": [
+            {"tile_id": 0, "remove": True},
+        ],
+    }).to_dict()
+
+    assert removed["session"]["structures_state"]["by_tile_id"]["0"] == {
+        "structure_type": None,
+        "structure_color": None,
+    }
+
+
+def test_board_layout_manual_has_no_auto_structures() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s6",
+        "player_ids": ["alpha"],
+        "turn_order": ["alpha"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+
+    layout_result = api.post("/board-layout", {
+        "session_id": "s6",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    }).to_dict()
+
+    tiles = layout_result["session"]["board_layout_state"]["board_tiles"]
+    assert layout_result["session"]["board_layout_state"]["layout_mode"] == "manual"
+    assert all(tile["structure_type"] is None for tile in tiles)
+
+
+def test_board_layout_bootstrap_auto_places_structures_and_locks_editing() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s7",
+        "player_ids": ["alpha"],
+        "turn_order": ["alpha"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+
+    layout_result = api.post("/board-layout", {
+        "session_id": "s7",
+        "placements": _default_board_layout(),
+        "layout_mode": "bootstrap",
+    }).to_dict()
+
+    tiles = layout_result["session"]["board_layout_state"]["board_tiles"]
+    assert layout_result["session"]["board_layout_state"]["layout_mode"] == "bootstrap"
+    assert any(tile["structure_type"] is not None for tile in tiles)
+
+    locked_result = api.post("/structures", {
+        "session_id": "s7",
+        "structures": [
+            {"tile_id": 0, "structure_type": "standing_stone", "structure_color": "white"},
+        ],
+    }).to_dict()
+    assert "STRUCTURES_LOCKED" in _warning_codes(locked_result)
+    assert locked_result["session"]["structures_state"]["by_tile_id"] == {}
+
+
+def test_ask_ai_places_a_token_automatically() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s8",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s8",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+    api.post("/map", {"session_id": "s8"})
+
+    ask_result = api.post("/ask-ai", {
+        "session_id": "s8",
+        "tile_id": 0,
+        "player_id": "alpha",
+    }).to_dict()
+
+    assert ask_result["data"]["tile_id"] == 0
+    assert ask_result["data"]["player_id"] == "alpha"
+    assert ask_result["data"]["token_type"] in {"round", "cube"}
+    assert len(ask_result["session"]["map_state"]["observed_tokens"]) == 1
+
+
+def test_map_tokens_overwrite_by_tile_and_player() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s9",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s9",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+
+    result = api.post("/map", {
+        "session_id": "s9",
+        "observed_tokens": [
+            {"tile_id": 5, "player_id": "alpha", "token_type": "round"},
+            {"tile_id": 5, "player_id": "alpha", "token_type": "cube"},
+            {"tile_id": 5, "player_id": "beta", "token_type": "round"},
+        ],
+    }).to_dict()
+
+    tokens = result["session"]["map_state"]["observed_tokens"]
+    assert len(tokens) == 2
+
+    by_player = {entry["player_id"]: entry for entry in tokens}
+    assert by_player["alpha"]["token_type"] == "cube"
+    assert by_player["beta"]["token_type"] == "round"
+
+
+def test_map_tokens_allow_one_token_per_player_on_same_tile() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s10",
+        "player_ids": ["alpha", "beta", "gamma"],
+        "turn_order": ["alpha", "beta", "gamma"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s10",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+
+    result = api.post("/map", {
+        "session_id": "s10",
+        "observed_tokens": [
+            {"tile_id": 12, "player_id": "alpha", "token_type": "round"},
+            {"tile_id": 12, "player_id": "beta", "token_type": "cube"},
+            {"tile_id": 12, "player_id": "gamma", "token_type": "round"},
+        ],
+    }).to_dict()
+
+    tokens = result["session"]["map_state"]["observed_tokens"]
+    assert len(tokens) == 3
+    assert {entry["player_id"] for entry in tokens} == {"alpha", "beta", "gamma"}
+
+
+def test_map_tokens_overwrite_uses_trimmed_player_id_key() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s11",
+        "player_ids": ["alpha"],
+        "turn_order": ["alpha"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s11",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+
+    result = api.post("/map", {
+        "session_id": "s11",
+        "observed_tokens": [
+            {"tile_id": 3, "player_id": " alpha ", "token_type": "round"},
+            {"tile_id": 3, "player_id": "alpha", "token_type": "cube"},
+        ],
+    }).to_dict()
+
+    tokens = result["session"]["map_state"]["observed_tokens"]
+    assert len(tokens) == 1
+    assert tokens[0]["player_id"] == "alpha"
+    assert tokens[0]["token_type"] == "cube"
+
+
+def test_ask_ai_overwrites_existing_token_for_same_tile_and_player() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s12",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s12",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+    api.post("/map", {
+        "session_id": "s12",
+        "observed_tokens": [
+            {"tile_id": 0, "player_id": "alpha", "token_type": "round"},
+            {"tile_id": 0, "player_id": "beta", "token_type": "cube"},
+        ],
+    })
+
+    ask_result = api.post("/ask-ai", {
+        "session_id": "s12",
+        "tile_id": 0,
+        "player_id": "alpha",
+    }).to_dict()
+
+    tokens = ask_result["session"]["map_state"]["observed_tokens"]
+    alpha_tokens = [entry for entry in tokens if entry["player_id"] == "alpha" and entry["tile_id"] == 0]
+    beta_tokens = [entry for entry in tokens if entry["player_id"] == "beta" and entry["tile_id"] == 0]
+
+    assert len(alpha_tokens) == 1
+    assert len(beta_tokens) == 1
+    assert alpha_tokens[0]["token_type"] == ask_result["data"]["token_type"]
 
 
 def test_spa_recalculate_returns_hypothesis_space_and_moves() -> None:

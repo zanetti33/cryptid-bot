@@ -1,5 +1,5 @@
 from data.board_loader import load_default_board
-from rules.clues import OrPredicate, build_base_clues, build_clue_catalog, clues_by_id
+from game_model.clues import OrPredicate, build_base_clues, build_clue_catalog, clues_by_id
 
 
 def _any_tile(board, predicate):

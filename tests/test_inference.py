@@ -1,9 +1,9 @@
 from ai.inference import infer_hypothesis_space
-from rules.clues import AtomPredicate, Clue, TargetCategory
-from rules.map import Board
-from rules.state import GameSnapshot
-from rules.tokens import GameState
-from rules.types import TerrainType, TokenType
+from game_model.clues import AtomPredicate, Clue, TargetCategory
+from game_model.map import Board
+from game_model.state import GameSnapshot
+from game_model.tokens import GameState
+from game_model.types import TerrainType, TokenType
 from typing import Tuple
 
 

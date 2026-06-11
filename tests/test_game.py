@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from rules.clues import AtomPredicate, Clue, TargetCategory
-from rules.game import Game, GamePhase, PlayerState
-from rules.map import Board
-from rules.types import TerrainType, TokenType
+from game_model.clues import AtomPredicate, Clue, TargetCategory
+from game_model.game import Game, GamePhase, PlayerState
+from game_model.map import Board
+from game_model.types import TerrainType, TokenType
 
 
 def _build_board() -> Board:

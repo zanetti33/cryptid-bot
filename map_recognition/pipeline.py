@@ -15,8 +15,8 @@ from map_recognition.layout_recognizer import (
 )
 from map_recognition.module_classifier import ModuleClassifier
 from map_recognition.tile_classifier import TerrainPrediction, classify_terrain_with_confidence
-from rules.map import Board
-from rules.types import TerrainType
+from game_model.map import Board
+from game_model.types import TerrainType
 
 Coord = Tuple[int, int]
 

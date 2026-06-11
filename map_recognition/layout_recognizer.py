@@ -10,8 +10,8 @@ from PIL import Image
 
 from data.board_loader import load_module_templates, load_slots
 from map_recognition.module_classifier import ModuleClassifier, SectionModuleClassification
-from rules.map import Board
-from rules.types import TerrainType
+from game_model.map import Board
+from game_model.types import TerrainType
 
 Coord = Tuple[int, int]
 SectionId = str

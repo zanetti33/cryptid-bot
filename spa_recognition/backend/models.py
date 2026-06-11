@@ -65,6 +65,7 @@ class BoardLayoutState:
     cols: int = 12
     rows: int = 9
     is_complete: bool = False
+    layout_mode: Literal["manual", "bootstrap"] = "manual"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -73,6 +74,7 @@ class BoardLayoutState:
             "cols": self.cols,
             "rows": self.rows,
             "is_complete": self.is_complete,
+            "layout_mode": self.layout_mode,
         }
 
 

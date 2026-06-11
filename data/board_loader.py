@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from rules.map import Board, HexTile
-from rules.types import AnimalTerritory, StructureColor, StructureType, TerrainType
+from game_model.map import Board, HexTile
+from game_model.types import AnimalTerritory, StructureColor, StructureType, TerrainType
 
 DATA_DIR = Path(__file__).resolve().parent
 

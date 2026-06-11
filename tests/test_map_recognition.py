@@ -8,7 +8,7 @@ from map_recognition.dataset import dataset_image_path, dataset_label_path
 from map_recognition.layout_recognizer import recognize_layout_from_terrains
 from map_recognition.pipeline import image_to_board_state
 from map_recognition.tile_classifier import classify_terrain
-from rules.types import TerrainType
+from game_model.types import TerrainType
 
 
 def _image_path(name: str) -> Path:

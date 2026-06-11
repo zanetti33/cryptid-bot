@@ -1,10 +1,10 @@
 const FALLBACK_SLOTS = [
   { slot_id: 1, origin_q: 0, origin_r: 0 },
   { slot_id: 2, origin_q: 6, origin_r: 0 },
-  { slot_id: 3, origin_q: 12, origin_r: 0 },
-  { slot_id: 4, origin_q: 0, origin_r: 3 },
-  { slot_id: 5, origin_q: 6, origin_r: 3 },
-  { slot_id: 6, origin_q: 12, origin_r: 3 },
+  { slot_id: 3, origin_q: 0, origin_r: 3 },
+  { slot_id: 4, origin_q: 6, origin_r: 3 },
+  { slot_id: 5, origin_q: 0, origin_r: 6 },
+  { slot_id: 6, origin_q: 6, origin_r: 6 },
 ];
 
 const FALLBACK_SECTIONS = ["A", "B", "C", "D", "E", "F"];
@@ -12,6 +12,14 @@ const FALLBACK_ORIENTATIONS = ["normal", "flipped"];
 
 function getPlacementBySlot(placements, slotId) {
   return placements.find((entry) => entry.slot_id === slotId) || null;
+}
+
+function moduleLabel(sectionId) {
+  if (typeof sectionId !== "string" || sectionId.length !== 1) {
+    return sectionId;
+  }
+  const index = sectionId.charCodeAt(0) - 64;
+  return index >= 1 && index <= 26 ? String(index) : sectionId;
 }
 
 export function BoardComposer({
@@ -31,10 +39,10 @@ export function BoardComposer({
       <div className="panel-header">
         <div>
           <h2>1. Componi la board</h2>
-          <p>Assegna un module template a ciascuno dei 6 board slot prima di modificare la mappa.</p>
+          <p>Assegna un modulo a ciascuno dei 6 slot prima di applicare il layout.</p>
         </div>
         <button onClick={onApply} disabled={isBusy}>
-          {isBusy ? "Applying..." : "Apply board layout"}
+          {isBusy ? "Applicazione..." : "Applica layout board"}
         </button>
       </div>
 
@@ -55,15 +63,15 @@ export function BoardComposer({
               </p>
 
               <label>
-                Module
+                  Modulo
                 <select
                   value={placement?.section_id || ""}
                   onChange={(event) => onPlacementChange(slot.slot_id, "section_id", event.target.value)}
                 >
-                  <option value="">Select module</option>
+                  <option value="">Seleziona modulo</option>
                   {sections.map((sectionId) => (
                     <option key={sectionId} value={sectionId}>
-                      {sectionId}
+                      {moduleLabel(sectionId)}
                     </option>
                   ))}
                 </select>

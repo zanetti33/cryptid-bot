@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
-from rules.types import TerrainType
+from game_model.types import TerrainType
 
 
 TerrainPalette = Dict[TerrainType, Tuple[int, int, int]]

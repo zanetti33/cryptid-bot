@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 
 from data.board_loader import load_default_board, load_module_templates
-from rules.tokens import GameState
-from rules.types import StructureType, TokenType
+from game_model.tokens import GameState
+from game_model.types import StructureType, TokenType
 
 
 def test_default_board_has_108_tiles() -> None:
