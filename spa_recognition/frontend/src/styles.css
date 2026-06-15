@@ -15,6 +15,18 @@ body {
   padding: 16px;
 }
 
+.app-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.app-title-row h1 {
+  margin: 0;
+}
+
 .panel-section {
   background: #ffffff;
   border: 1px solid #d5ddeb;

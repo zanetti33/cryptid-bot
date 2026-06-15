@@ -73,9 +73,10 @@
   "include_inverse_clues": false,
   "simulation": {
     "seed": 17,
-    "observation_count": 15,
-    "include_bot_observations": false,
-    "ensure_player_polarity_coverage": true
+    "observation_count": 12,
+    "include_bot_observations": true,
+    "ensure_player_polarity_coverage": true,
+    "distribution_mode": "equal_per_player"
   },
   "evaluation": {
     "top_k": 5

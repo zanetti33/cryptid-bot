@@ -463,3 +463,53 @@ def test_spa_recalculate_returns_hypothesis_space_and_moves() -> None:
     assert "recommended_moves" in recalc_result["data"]
     assert len(recalc_result["data"]["recommended_moves"]) <= 3
 
+
+def test_simulate_observations_distributes_equally_per_player_without_fixed_seed() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s15",
+        "player_ids": ["bot", "p1", "p2", "p3"],
+        "turn_order": ["p1", "p2", "p3", "bot"],
+        "bot_player_id": "bot",
+        "bot_clue_id": "within_one_swamp",
+    })
+    api.post("/board-layout", {
+        "session_id": "s15",
+        "placements": [
+            {"slot_id": 1, "section_id": "D", "orientation": "flipped"},
+            {"slot_id": 2, "section_id": "F", "orientation": "flipped"},
+            {"slot_id": 3, "section_id": "B", "orientation": "normal"},
+            {"slot_id": 4, "section_id": "C", "orientation": "flipped"},
+            {"slot_id": 5, "section_id": "A", "orientation": "normal"},
+            {"slot_id": 6, "section_id": "E", "orientation": "normal"},
+        ],
+        "layout_mode": "manual",
+    })
+    api.post("/map", {"session_id": "s15"})
+
+    result = api.post("/simulate-observations", {
+        "session_id": "s15",
+        "player_clues": [
+            {"player_id": "bot", "clue_id": "within_one_swamp"},
+            {"player_id": "p1", "clue_id": "within_one_either_animal_territory"},
+            {"player_id": "p2", "clue_id": "terrain_pair_desert_water"},
+            {"player_id": "p3", "clue_id": "within_three_blue_structure"},
+        ],
+        "observation_count": 12,
+        "include_bot_observations": True,
+        "ensure_player_polarity_coverage": True,
+        "distribution_mode": "equal_per_player",
+    }).to_dict()
+
+    assert isinstance(result["data"]["used_seed"], int)
+    assert result["data"]["generated_count"] == 12
+
+    tokens = result["session"]["map_state"]["observed_tokens"]
+    by_player = {}
+    for token in tokens:
+        by_player.setdefault(token["player_id"], 0)
+        by_player[token["player_id"]] += 1
+
+    assert by_player == {"bot": 3, "p1": 3, "p2": 3, "p3": 3}
+
+

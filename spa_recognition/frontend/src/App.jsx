@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { postEndpoint } from "./api/client";
 import { ClickableHexMap } from "./components/ClickableHexMap";
+import { DEFAULT_LAYOUT_SCENARIO } from "./defaultLayoutScenario";
 import { GameSetupForm } from "./components/GameSetupForm";
 import { ModeSwitcher } from "./components/ModeSwitcher";
 import { StructurePanel } from "./components/StructurePanel";
@@ -9,16 +10,9 @@ import { TokenPanel } from "./components/TokenPanel";
 import { Toolbar } from "./components/Toolbar";
 
 const DEFAULT_SESSION_ID = "default";
-const ALL_PLAYER_IDS = ["alpha", "beta", "gamma", "omega", "epsilon"];
-const DEFAULT_PLAYER_COUNT = 3;
-const DEFAULT_BOARD_LAYOUT = [
-  { slot_id: 1, section_id: "C", orientation: "normal" },
-  { slot_id: 2, section_id: "A", orientation: "flipped" },
-  { slot_id: 3, section_id: "F", orientation: "normal" },
-  { slot_id: 4, section_id: "B", orientation: "normal" },
-  { slot_id: 5, section_id: "E", orientation: "flipped" },
-  { slot_id: 6, section_id: "D", orientation: "normal" },
-];
+const ALL_PLAYER_IDS = ["bot", "p1", "p2", "p3", "p4"];
+const DEFAULT_PLAYER_COUNT = DEFAULT_LAYOUT_SCENARIO.players.length;
+const DEFAULT_BOARD_LAYOUT = DEFAULT_LAYOUT_SCENARIO.board.placements;
 
 function replacePlacement(placements, nextPlacement) {
   const filtered = placements.filter((entry) => entry.slot_id !== nextPlacement.slot_id);
@@ -103,6 +97,40 @@ function formatTime(value) {
   });
 }
 
+function sectionLocalKey(sectionId, localId) {
+  return `${sectionId}:${localId}`;
+}
+
+function mapScenarioStructuresToTileStructures(boardTiles, scenarioStructures) {
+  const tileIdBySectionLocal = new Map();
+  for (const tile of boardTiles || []) {
+    const sectionId = tile?.section_id;
+    const localId = tile?.local_id;
+    const tileId = tile?.tile_id;
+    if (typeof sectionId === "string" && typeof localId === "number" && typeof tileId === "number") {
+      tileIdBySectionLocal.set(sectionLocalKey(sectionId, localId), tileId);
+    }
+  }
+
+  const mappedStructures = [];
+  const missingStructures = [];
+  for (const structure of scenarioStructures || []) {
+    const key = sectionLocalKey(structure?.section_id, structure?.local_id);
+    const tileId = tileIdBySectionLocal.get(key);
+    if (typeof tileId !== "number") {
+      missingStructures.push(structure);
+      continue;
+    }
+    mappedStructures.push({
+      tile_id: tileId,
+      structure_type: structure.structure_type,
+      structure_color: structure.structure_color,
+    });
+  }
+
+  return { mappedStructures, missingStructures };
+}
+
 export function App() {
   const [mode, setMode] = useState("structures");
   const [phase, setPhase] = useState("setup");
@@ -181,16 +209,6 @@ export function App() {
     }
   ), []);
 
-  const isSetupValid =
-    configuredPlayerIds.length === playerCount
-    && Boolean(botPlayerId)
-    && configuredPlayerIds.includes(botPlayerId)
-    && turnOrder.length === playerCount
-    && new Set(turnOrder).size === playerCount
-    && turnOrder.every((playerId) => configuredPlayerIds.includes(playerId))
-    && turnOrder.includes(botPlayerId)
-    && Boolean(botClueId.trim());
-
   function updatePlayerCount(nextCount) {
     setPlayerCount(nextCount);
   }
@@ -247,8 +265,22 @@ export function App() {
     };
   }, []);
 
-  async function bootstrapSession() {
-    if (!isSetupValid) {
+  async function bootstrapSession(overrides = null) {
+    const selectedPlayers = overrides?.player_ids || configuredPlayerIds;
+    const selectedTurnOrder = overrides?.turn_order || turnOrder;
+    const selectedBotPlayerId = overrides?.bot_player_id || botPlayerId;
+    const selectedBotClueId = (overrides?.bot_clue_id || botClueId).trim();
+    const selectedPlacements = overrides?.placements || placements;
+    const isValidRequest =
+      selectedPlayers.length > 0
+      && Boolean(selectedBotPlayerId)
+      && selectedPlayers.includes(selectedBotPlayerId)
+      && selectedTurnOrder.length === selectedPlayers.length
+      && new Set(selectedTurnOrder).size === selectedPlayers.length
+      && selectedTurnOrder.every((playerId) => selectedPlayers.includes(playerId))
+      && selectedTurnOrder.includes(selectedBotPlayerId)
+      && Boolean(selectedBotClueId);
+    if (!isValidRequest) {
       return;
     }
 
@@ -256,20 +288,96 @@ export function App() {
     try {
       const setup = await postEndpoint("/setup", {
         session_id: DEFAULT_SESSION_ID,
-        player_ids: configuredPlayerIds,
-        turn_order: turnOrder,
-        bot_player_id: botPlayerId,
-        bot_clue_id: botClueId.trim(),
+        player_ids: selectedPlayers,
+        turn_order: selectedTurnOrder,
+        bot_player_id: selectedBotPlayerId,
+        bot_clue_id: selectedBotClueId,
       });
 
       setBoardCatalog(setup.data?.board_layout_catalog || null);
       setClueCatalog(setup.data?.clues_catalog || clueCatalog);
-      setPlacements(setup.data?.board_layout_catalog?.default_layout || DEFAULT_BOARD_LAYOUT);
+      setPlacements(selectedPlacements);
       setResponse(setup);
       setPhase(setup.session.phase);
       setSelectedTileId(null);
+      return setup;
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function applyDefaultSetup() {
+    const defaultPlayerIds = DEFAULT_LAYOUT_SCENARIO.players.map((player) => player.player_id);
+    const defaultBotPlayerId = DEFAULT_LAYOUT_SCENARIO.bot_player_id;
+    const defaultBotClueId = (
+      DEFAULT_LAYOUT_SCENARIO.players.find((player) => player.player_id === defaultBotPlayerId)?.clue_id || ""
+    );
+    const defaultTurnOrder = DEFAULT_LAYOUT_SCENARIO.turn_order;
+    const defaultPlacements = DEFAULT_LAYOUT_SCENARIO.board.placements;
+    const defaultStructures = DEFAULT_LAYOUT_SCENARIO.board.structures;
+    const defaultSimulation = DEFAULT_LAYOUT_SCENARIO.simulation || {};
+
+    setPlayerCount(defaultPlayerIds.length);
+    setTurnOrder(defaultTurnOrder);
+    setBotPlayerId(defaultBotPlayerId);
+    setBotClueId(defaultBotClueId);
+    setPlacements(defaultPlacements);
+
+    try {
+      await bootstrapSession({
+        player_ids: defaultPlayerIds,
+        turn_order: defaultTurnOrder,
+        bot_player_id: defaultBotPlayerId,
+        bot_clue_id: defaultBotClueId,
+        placements: defaultPlacements,
+      });
+      const boardLayoutResult = await applyBoardLayoutWithPlacements(defaultPlacements);
+      const boardTilesFromLayout = boardLayoutResult?.session?.board_layout_state?.board_tiles || [];
+      const { mappedStructures, missingStructures } = mapScenarioStructuresToTileStructures(
+        boardTilesFromLayout,
+        defaultStructures,
+      );
+
+      if (mappedStructures.length > 0) {
+        setBusy(true);
+        try {
+          const structuresResult = await postEndpoint("/structures", {
+            session_id: DEFAULT_SESSION_ID,
+            structures: mappedStructures,
+          });
+          setResponse(structuresResult);
+          setPhase(structuresResult.session.phase);
+          scheduleAiSync();
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      if (missingStructures.length > 0) {
+        setWarningToast({
+          code: "DEFAULT_LAYOUT_STRUCTURES_PARTIAL",
+          message: `${missingStructures.length} strutture non applicate: tile non trovato nel layout corrente.`,
+          severity: "warn",
+        });
+      }
+
+      const simulationResult = await postEndpoint("/simulate-observations", {
+        session_id: DEFAULT_SESSION_ID,
+        player_clues: DEFAULT_LAYOUT_SCENARIO.players,
+        observation_count: defaultSimulation.observation_count,
+        include_bot_observations: defaultSimulation.include_bot_observations,
+        ensure_player_polarity_coverage: defaultSimulation.ensure_player_polarity_coverage,
+        distribution_mode: defaultSimulation.distribution_mode,
+      });
+      setResponse(simulationResult);
+      setPhase(simulationResult.session.phase);
+      scheduleAiSync();
+    } catch (error) {
+      setWarningToast({
+        code: "DEFAULT_LAYOUT_APPLY_FAILED",
+        message: error instanceof Error ? error.message : "Applicazione layout default fallita.",
+        severity: "error",
+      });
     }
   }
 
@@ -282,21 +390,26 @@ export function App() {
     setPlacements(replacePlacement(placements, { ...currentPlacement, [fieldName]: value }));
   }
 
-  async function applyBoardLayout() {
+  async function applyBoardLayoutWithPlacements(layoutPlacements) {
     setBusy(true);
     try {
       const result = await postEndpoint("/board-layout", {
         session_id: DEFAULT_SESSION_ID,
-        placements,
+        placements: layoutPlacements,
         layout_mode: "manual",
       });
       setBoardCatalog(result.data?.board_layout_catalog || boardCatalog);
       setResponse(result);
       setPhase(result.session.phase);
       setSelectedTileId(null);
+      return result;
     } finally {
       setBusy(false);
     }
+  }
+
+  async function applyBoardLayout() {
+    await applyBoardLayoutWithPlacements(placements);
   }
 
   async function askAiForTile() {
@@ -468,7 +581,18 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <h1>Cryptid SPA Recognition (MVP)</h1>
+      <div className="app-title-row">
+        <h1>Cryptid SPA Recognition (MVP)</h1>
+        <button
+          type="button"
+          onClick={applyDefaultSetup}
+          disabled={busy}
+          aria-label="Setup partita"
+          title="Setup partita"
+        >
+          {busy ? "Configurazione..." : "Applica layout default"}
+        </button>
+      </div>
 
       <Toolbar
         phase={phase}
@@ -489,13 +613,11 @@ export function App() {
           botPlayerId={botPlayerId}
           botClueId={botClueId}
           clueCatalog={clueCatalog}
-          isSetupValid={isSetupValid}
           isBusy={busy}
           onPlayerCountChange={updatePlayerCount}
           onTurnOrderChange={updateTurnOrder}
           onBotPlayerChange={setBotPlayerId}
           onBotClueChange={setBotClueId}
-          onSubmit={bootstrapSession}
           boardCatalog={boardCatalog}
           placements={placements}
           onPlacementChange={updatePlacement}

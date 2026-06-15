@@ -25,6 +25,20 @@ def test_generate_synthetic_observations_is_deterministic() -> None:
     assert len(first) == scenario.simulation.observation_count
 
 
+def test_generate_synthetic_observations_can_distribute_equally_per_player() -> None:
+    scenario = load_scenario_definition(SCENARIO_PATH)
+    observations = generate_synthetic_observations(scenario)
+
+    by_player = {}
+    for observation in observations:
+        by_player.setdefault(observation.player_id, 0)
+        by_player[observation.player_id] += 1
+
+    assert len(observations) == 12
+    assert set(by_player.keys()) == {player.player_id for player in scenario.players}
+    assert all(count == 3 for count in by_player.values())
+
+
 def test_generated_observations_match_true_clues() -> None:
     scenario = load_scenario_definition(SCENARIO_PATH)
     board = build_board_for_scenario(scenario.board)

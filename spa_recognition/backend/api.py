@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import logging
+import random
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ai import CryptidAIEngine, InitialSetup
@@ -10,6 +11,7 @@ from ai.inference import HypothesisSpace, infer_hypothesis_space
 from ai.strategy import RecommendedMove, recommend_moves
 from data.board_loader import load_layout_instance, load_module_templates, load_slots
 from data.clue_loader import load_clue_definitions
+from game_model.clues import clues_by_id
 from game_model.map import Board, HexTile
 from game_model.state import GameSnapshot
 from game_model.types import AnimalTerritory, StructureColor, StructureType, TerrainType, TokenType
@@ -58,6 +60,8 @@ class SpaRecognitionApi:
             return self.post_ai_place_cube(payload)
         if path == "/recalculate":
             return self.post_recalculate(payload)
+        if path == "/simulate-observations":
+            return self.post_simulate_observations(payload)
         raise ValueError(f"Unknown path: {path}")
 
     def post_catalog(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
@@ -732,6 +736,75 @@ class SpaRecognitionApi:
             },
         )
 
+    def post_simulate_observations(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
+        data = payload or {}
+        session_id = str(data.get("session_id", "default"))
+        current = self._store.create_or_get(session_id)
+
+        local_warnings: List[WarningItem] = []
+        board, board_warnings = _board_from_session(current)
+        local_warnings.extend(board_warnings)
+
+        raw_player_clues = data.get("player_clues", [])
+        if not isinstance(raw_player_clues, list):
+            local_warnings.append(_warning("SIMULATION_PLAYER_CLUES_INVALID", "player_clues must be a list.", "simulation", "error"))
+            raw_player_clues = []
+
+        player_clues: List[Tuple[str, str]] = []
+        for entry in raw_player_clues:
+            if not isinstance(entry, dict):
+                local_warnings.append(_warning("SIMULATION_PLAYER_CLUE_ENTRY_INVALID", "Each player_clues entry must be an object.", "simulation", "warn"))
+                continue
+            player_id = _optional_string(entry.get("player_id"), None)
+            clue_id = _optional_string(entry.get("clue_id"), None)
+            if player_id is None or clue_id is None:
+                local_warnings.append(_warning("SIMULATION_PLAYER_CLUE_MISSING", "Each player_clues entry must include player_id and clue_id.", "simulation", "warn"))
+                continue
+            player_clues.append((player_id, clue_id))
+
+        observation_count = max(0, _coerce_int(data.get("observation_count"), 0))
+        include_bot_observations = bool(data.get("include_bot_observations", False))
+        ensure_player_polarity_coverage = bool(data.get("ensure_player_polarity_coverage", True))
+        distribution_mode = str(data.get("distribution_mode", "random")).strip().lower()
+        if distribution_mode not in {"random", "equal_per_player"}:
+            local_warnings.append(_warning("SIMULATION_DISTRIBUTION_INVALID", "distribution_mode must be random or equal_per_player.", "simulation", "warn"))
+            distribution_mode = "random"
+
+        explicit_seed = data.get("seed")
+        if explicit_seed is None:
+            seed = random.SystemRandom().randrange(0, 2**32)
+        else:
+            seed = _coerce_int(explicit_seed, random.SystemRandom().randrange(0, 2**32))
+
+        generated_tokens, simulation_warnings = _generate_simulated_tokens(
+            board=board,
+            player_clues=player_clues,
+            bot_player_id=current.setup.bot_player_id,
+            include_bot_observations=include_bot_observations,
+            observation_count=observation_count,
+            ensure_player_polarity_coverage=ensure_player_polarity_coverage,
+            distribution_mode=distribution_mode,
+            seed=seed,
+        )
+        local_warnings.extend(simulation_warnings)
+
+        updated_map = MapState(
+            cols=current.map_state.cols,
+            rows=current.map_state.rows,
+            observed_tokens=tuple(generated_tokens),
+        )
+        merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
+        updated = current.with_updates(map_state=updated_map, phase=current.phase, warnings=merged_warnings)
+        self._store.upsert(updated)
+        return ApiResult(
+            session=updated,
+            warnings=merged_warnings,
+            data={
+                "used_seed": seed,
+                "generated_count": len(generated_tokens),
+            },
+        )
+
 
 def _build_snapshot_from_session(session: SessionState) -> Tuple[GameSnapshot, List[WarningItem]]:
     warnings: List[WarningItem] = []
@@ -798,6 +871,157 @@ def _build_snapshot_from_session(session: SessionState) -> Tuple[GameSnapshot, L
         bot_player_id=session.setup.bot_player_id,
     )
     return snapshot, warnings
+
+
+def _board_from_session(session: SessionState) -> Tuple[Board, List[WarningItem]]:
+    snapshot, warnings = _build_snapshot_from_session(session)
+    return deepcopy(snapshot.board), warnings
+
+
+def _generate_simulated_tokens(
+    board: Board,
+    player_clues: Sequence[Tuple[str, str]],
+    bot_player_id: Optional[str],
+    include_bot_observations: bool,
+    observation_count: int,
+    ensure_player_polarity_coverage: bool,
+    distribution_mode: str,
+    seed: int,
+) -> Tuple[List[Dict[str, Any]], List[WarningItem]]:
+    warnings: List[WarningItem] = []
+    clue_catalog = clues_by_id(include_inverse=False)
+    rng = random.Random(seed)
+
+    normalized_players = []
+    seen_players = set()
+    for player_id, clue_id in player_clues:
+        if player_id in seen_players:
+            continue
+        seen_players.add(player_id)
+        if not include_bot_observations and bot_player_id is not None and player_id == bot_player_id:
+            continue
+        if clue_id not in clue_catalog:
+            warnings.append(_warning("SIMULATION_CLUE_UNKNOWN", f"Unknown clue_id for player {player_id}: {clue_id}", "simulation", "warn"))
+            continue
+        normalized_players.append((player_id, clue_catalog[clue_id]))
+
+    if not normalized_players or observation_count <= 0:
+        return [], warnings
+
+    candidates_by_player: Dict[str, List[Tuple[int, bool]]] = {}
+    by_player_and_polarity: Dict[Tuple[str, bool], List[Tuple[int, bool]]] = {}
+    for player_id, clue in normalized_players:
+        matches_for_player: List[Tuple[int, bool]] = []
+        for tile in sorted(board.tiles.values(), key=lambda item: item.tile_id):
+            answered_yes = clue.matches(tile, board)
+            item = (tile.tile_id, answered_yes)
+            matches_for_player.append(item)
+            by_player_and_polarity.setdefault((player_id, answered_yes), []).append(item)
+        candidates_by_player[player_id] = matches_for_player
+
+    max_available = sum(len(items) for items in candidates_by_player.values())
+    target_count = min(max_available, observation_count)
+
+    selected: List[Tuple[str, int, bool]] = []
+    selected_keys = set()
+    player_ids = [player_id for player_id, _ in normalized_players]
+
+    if distribution_mode == "equal_per_player":
+        base_quota = target_count // len(player_ids)
+        remainder = target_count % len(player_ids)
+        shuffled_players = player_ids[:]
+        rng.shuffle(shuffled_players)
+        extra_players = set(shuffled_players[:remainder])
+        for player_id in player_ids:
+            quota = base_quota + (1 if player_id in extra_players else 0)
+            _select_player_samples(
+                rng=rng,
+                player_id=player_id,
+                quota=quota,
+                selected=selected,
+                selected_keys=selected_keys,
+                by_player_and_polarity=by_player_and_polarity,
+                candidates_by_player=candidates_by_player,
+                ensure_player_polarity_coverage=ensure_player_polarity_coverage,
+            )
+    else:
+        if ensure_player_polarity_coverage:
+            for player_id in player_ids:
+                for polarity in [True, False]:
+                    if len(selected) >= target_count:
+                        break
+                    candidates = [
+                        sample
+                        for sample in by_player_and_polarity.get((player_id, polarity), [])
+                        if (player_id, sample[0]) not in selected_keys
+                    ]
+                    if not candidates:
+                        continue
+                    tile_id, answered_yes = rng.choice(candidates)
+                    selected.append((player_id, tile_id, answered_yes))
+                    selected_keys.add((player_id, tile_id))
+        remaining = []
+        for player_id in player_ids:
+            for tile_id, answered_yes in candidates_by_player.get(player_id, []):
+                if (player_id, tile_id) in selected_keys:
+                    continue
+                remaining.append((player_id, tile_id, answered_yes))
+        rng.shuffle(remaining)
+        for player_id, tile_id, answered_yes in remaining:
+            if len(selected) >= target_count:
+                break
+            selected.append((player_id, tile_id, answered_yes))
+
+    normalized_tokens = [
+        {
+            "tile_id": tile_id,
+            "player_id": player_id,
+            "token_type": TokenType.ROUND.value if answered_yes else TokenType.CUBE.value,
+        }
+        for player_id, tile_id, answered_yes in selected[:target_count]
+    ]
+    return normalized_tokens, warnings
+
+
+def _select_player_samples(
+    rng: random.Random,
+    player_id: str,
+    quota: int,
+    selected: List[Tuple[str, int, bool]],
+    selected_keys: set,
+    by_player_and_polarity: Dict[Tuple[str, bool], List[Tuple[int, bool]]],
+    candidates_by_player: Dict[str, List[Tuple[int, bool]]],
+    ensure_player_polarity_coverage: bool,
+) -> None:
+    if quota <= 0:
+        return
+
+    if ensure_player_polarity_coverage:
+        for polarity in [True, False]:
+            if sum(1 for current in selected if current[0] == player_id) >= quota:
+                break
+            candidates = [
+                sample
+                for sample in by_player_and_polarity.get((player_id, polarity), [])
+                if (player_id, sample[0]) not in selected_keys
+            ]
+            if not candidates:
+                continue
+            tile_id, answered_yes = rng.choice(candidates)
+            selected.append((player_id, tile_id, answered_yes))
+            selected_keys.add((player_id, tile_id))
+
+    remaining = [
+        (tile_id, answered_yes)
+        for tile_id, answered_yes in candidates_by_player.get(player_id, [])
+        if (player_id, tile_id) not in selected_keys
+    ]
+    rng.shuffle(remaining)
+    for tile_id, answered_yes in remaining:
+        if sum(1 for current in selected if current[0] == player_id) >= quota:
+            break
+        selected.append((player_id, tile_id, answered_yes))
+        selected_keys.add((player_id, tile_id))
 
 
 def _build_engine_from_session(session: SessionState) -> CryptidAIEngine:

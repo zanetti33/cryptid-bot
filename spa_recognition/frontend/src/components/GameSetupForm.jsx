@@ -50,13 +50,11 @@ export function GameSetupForm({
   botPlayerId,
   botClueId,
   clueCatalog,
-  isSetupValid,
   isBusy,
   onPlayerCountChange,
   onTurnOrderChange,
   onBotPlayerChange,
   onBotClueChange,
-  onSubmit,
   boardCatalog,
   placements,
   onPlacementChange,
@@ -204,7 +202,7 @@ export function GameSetupForm({
           })}
         </div>
       ) : (
-        <p className="slot-meta">Catalogo board non disponibile: avvia la sessione.</p>
+        <p className="slot-meta">Catalogo board non disponibile.</p>
       )}
 
       <div className="layout-actions-row">
@@ -214,11 +212,6 @@ export function GameSetupForm({
         </button>
       </div>
 
-      <div className="actions">
-        <button onClick={onSubmit} disabled={isBusy || !isSetupValid}>
-          {isBusy ? "Configurazione..." : "Avvia sessione"}
-        </button>
-      </div>
     </section>
   );
 }

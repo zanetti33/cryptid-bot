@@ -31,6 +31,7 @@ class ScenarioSimulationConfig:
     observation_count: int = 8
     include_bot_observations: bool = False
     ensure_player_polarity_coverage: bool = True
+    distribution_mode: str = "random"
 
 
 @dataclass(slots=True, frozen=True)
@@ -140,11 +141,15 @@ def scenario_definition_from_dict(payload: Dict[str, Any]) -> ScenarioDefinition
     simulation_payload = payload.get("simulation", {})
     if not isinstance(simulation_payload, dict):
         raise ValueError("simulation must be an object if provided.")
+    distribution_mode = str(simulation_payload.get("distribution_mode", "random")).strip().lower()
+    if distribution_mode not in {"random", "equal_per_player"}:
+        raise ValueError("simulation.distribution_mode must be 'random' or 'equal_per_player'.")
     simulation = ScenarioSimulationConfig(
         seed=int(simulation_payload.get("seed", 0)),
         observation_count=max(0, int(simulation_payload.get("observation_count", 8))),
         include_bot_observations=bool(simulation_payload.get("include_bot_observations", False)),
         ensure_player_polarity_coverage=bool(simulation_payload.get("ensure_player_polarity_coverage", True)),
+        distribution_mode=distribution_mode,
     )
 
     evaluation_payload = payload.get("evaluation", {})
@@ -202,31 +207,47 @@ def generate_synthetic_observations(
     if target_count == 0:
         return ()
 
+    if scenario.simulation.distribution_mode == "equal_per_player":
+        selected = _select_equal_per_player_observations(
+            rng=rng,
+            target_count=target_count,
+            active_players=active_players,
+            by_player_and_polarity=by_player_and_polarity,
+            ensure_player_polarity_coverage=scenario.simulation.ensure_player_polarity_coverage,
+        )
+    else:
+        selected = _select_random_observations(
+            rng=rng,
+            target_count=target_count,
+            active_players=active_players,
+            candidate_pool=candidate_pool,
+            by_player_and_polarity=by_player_and_polarity,
+            ensure_player_polarity_coverage=scenario.simulation.ensure_player_polarity_coverage,
+        )
+
+    return tuple(selected)
+
+
+def _select_random_observations(
+    rng: random.Random,
+    target_count: int,
+    active_players: Sequence[ScenarioPlayer],
+    candidate_pool: Sequence[SyntheticObservation],
+    by_player_and_polarity: Dict[Tuple[str, bool], List[SyntheticObservation]],
+    ensure_player_polarity_coverage: bool,
+) -> List[SyntheticObservation]:
     selected: List[SyntheticObservation] = []
     selected_keys = set()
 
-    if scenario.simulation.ensure_player_polarity_coverage:
-        coverage_candidates: List[Tuple[str, bool]] = []
-        for player in active_players:
-            if by_player_and_polarity.get((player.player_id, True)):
-                coverage_candidates.append((player.player_id, True))
-            if by_player_and_polarity.get((player.player_id, False)):
-                coverage_candidates.append((player.player_id, False))
-        rng.shuffle(coverage_candidates)
-
-        for player_id, polarity in coverage_candidates:
-            if len(selected) >= target_count:
-                break
-            available = [
-                observation
-                for observation in by_player_and_polarity.get((player_id, polarity), [])
-                if (observation.player_id, observation.tile_id) not in selected_keys
-            ]
-            if not available:
-                continue
-            chosen = rng.choice(available)
-            selected.append(chosen)
-            selected_keys.add((chosen.player_id, chosen.tile_id))
+    if ensure_player_polarity_coverage:
+        _seed_with_polarity_coverage(
+            rng=rng,
+            selected=selected,
+            selected_keys=selected_keys,
+            active_players=active_players,
+            by_player_and_polarity=by_player_and_polarity,
+            target_count=target_count,
+        )
 
     remaining = [
         observation
@@ -238,8 +259,121 @@ def generate_synthetic_observations(
         if len(selected) >= target_count:
             break
         selected.append(observation)
+    return selected
 
-    return tuple(selected)
+
+def _select_equal_per_player_observations(
+    rng: random.Random,
+    target_count: int,
+    active_players: Sequence[ScenarioPlayer],
+    by_player_and_polarity: Dict[Tuple[str, bool], List[SyntheticObservation]],
+    ensure_player_polarity_coverage: bool,
+) -> List[SyntheticObservation]:
+    selected: List[SyntheticObservation] = []
+    selected_keys = set()
+    if not active_players:
+        return selected
+
+    players = [player.player_id for player in active_players]
+    base_quota = target_count // len(players)
+    remainder = target_count % len(players)
+    remainder_players = players[:]
+    rng.shuffle(remainder_players)
+    quota_by_player = {
+        player_id: base_quota + (1 if player_id in remainder_players[:remainder] else 0)
+        for player_id in players
+    }
+
+    for player_id in players:
+        player_target = quota_by_player[player_id]
+        if player_target <= 0:
+            continue
+        player_selected = _select_for_single_player(
+            rng=rng,
+            player_id=player_id,
+            target_count=player_target,
+            by_player_and_polarity=by_player_and_polarity,
+            ensure_player_polarity_coverage=ensure_player_polarity_coverage,
+        )
+        for observation in player_selected:
+            key = (observation.player_id, observation.tile_id)
+            if key in selected_keys:
+                continue
+            selected.append(observation)
+            selected_keys.add(key)
+
+    return selected[:target_count]
+
+
+def _select_for_single_player(
+    rng: random.Random,
+    player_id: str,
+    target_count: int,
+    by_player_and_polarity: Dict[Tuple[str, bool], List[SyntheticObservation]],
+    ensure_player_polarity_coverage: bool,
+) -> List[SyntheticObservation]:
+    selected: List[SyntheticObservation] = []
+    selected_keys = set()
+
+    if ensure_player_polarity_coverage and target_count > 0:
+        for polarity in [True, False]:
+            if len(selected) >= target_count:
+                break
+            candidates = by_player_and_polarity.get((player_id, polarity), [])
+            if not candidates:
+                continue
+            chosen = rng.choice(candidates)
+            key = (chosen.player_id, chosen.tile_id)
+            if key in selected_keys:
+                continue
+            selected.append(chosen)
+            selected_keys.add(key)
+
+    remaining = [
+        observation
+        for polarity in [True, False]
+        for observation in by_player_and_polarity.get((player_id, polarity), [])
+        if (observation.player_id, observation.tile_id) not in selected_keys
+    ]
+    rng.shuffle(remaining)
+    for observation in remaining:
+        if len(selected) >= target_count:
+            break
+        selected.append(observation)
+
+    return selected
+
+
+def _seed_with_polarity_coverage(
+    rng: random.Random,
+    selected: List[SyntheticObservation],
+    selected_keys: set,
+    active_players: Sequence[ScenarioPlayer],
+    by_player_and_polarity: Dict[Tuple[str, bool], List[SyntheticObservation]],
+    target_count: int,
+) -> None:
+    coverage_candidates: List[Tuple[str, bool]] = []
+    for player in active_players:
+        if by_player_and_polarity.get((player.player_id, True)):
+            coverage_candidates.append((player.player_id, True))
+        if by_player_and_polarity.get((player.player_id, False)):
+            coverage_candidates.append((player.player_id, False))
+    rng.shuffle(coverage_candidates)
+
+    for player_id, polarity in coverage_candidates:
+        if len(selected) >= target_count:
+            break
+        available = [
+            observation
+            for observation in by_player_and_polarity.get((player_id, polarity), [])
+            if (observation.player_id, observation.tile_id) not in selected_keys
+        ]
+        if not available:
+            continue
+        chosen = rng.choice(available)
+        selected.append(chosen)
+        selected_keys.add((chosen.player_id, chosen.tile_id))
+
 
 
 def build_board_for_scenario(board_spec: ScenarioBoardSpec) -> Board:
