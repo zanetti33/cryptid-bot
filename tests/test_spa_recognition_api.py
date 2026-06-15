@@ -377,6 +377,65 @@ def test_ask_ai_overwrites_existing_token_for_same_tile_and_player() -> None:
     assert alpha_tokens[0]["token_type"] == ask_result["data"]["token_type"]
 
 
+def test_ai_answer_endpoint_updates_bot_model_on_map() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s13",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s13",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+    api.post("/map", {"session_id": "s13"})
+
+    result = api.post("/ai-answer", {
+        "session_id": "s13",
+        "tile_id": 0,
+    }).to_dict()
+
+    assert result["data"]["player_id"] == "alpha"
+    assert result["data"]["token_type"] in {"round", "cube"}
+    tokens = result["session"]["map_state"]["observed_tokens"]
+    assert len(tokens) == 1
+    assert tokens[0]["player_id"] == "alpha"
+    assert tokens[0]["tile_id"] == 0
+    assert tokens[0]["token_type"] == result["data"]["token_type"]
+
+
+def test_ai_place_cube_endpoint_places_bot_cube_on_map() -> None:
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s14",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s14",
+        "placements": _default_board_layout(),
+        "layout_mode": "manual",
+    })
+    api.post("/map", {"session_id": "s14"})
+
+    result = api.post("/ai-place-cube", {
+        "session_id": "s14",
+    }).to_dict()
+
+    assert result["data"]["player_id"] == "alpha"
+    assert result["data"]["token_type"] == "cube"
+    assert result["data"]["tile_id"] is not None
+    tokens = result["session"]["map_state"]["observed_tokens"]
+    assert len(tokens) == 1
+    assert tokens[0]["player_id"] == "alpha"
+    assert tokens[0]["token_type"] == "cube"
+
+
 def test_spa_recalculate_returns_hypothesis_space_and_moves() -> None:
     api = SpaRecognitionApi()
     api.post("/setup", {

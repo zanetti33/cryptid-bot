@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from copy import deepcopy
+import logging
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from ai import CryptidAIEngine, InitialSetup
+from ai.events import PlayerResponseEvent
 from ai.inference import HypothesisSpace, infer_hypothesis_space
 from ai.strategy import RecommendedMove, recommend_moves
 from data.board_loader import load_layout_instance, load_module_templates, load_slots
@@ -22,6 +26,9 @@ from spa_recognition.backend.models import (
     merge_warnings,
 )
 from spa_recognition.backend.session_store import SessionStore
+
+
+logger = logging.getLogger(__name__)
 
 
 class SpaRecognitionApi:
@@ -45,6 +52,10 @@ class SpaRecognitionApi:
             return self.post_clues(payload)
         if path == "/ask-ai":
             return self.post_ask_ai(payload)
+        if path == "/ai-answer":
+            return self.post_ai_answer(payload)
+        if path == "/ai-place-cube":
+            return self.post_ai_place_cube(payload)
         if path == "/recalculate":
             return self.post_recalculate(payload)
         raise ValueError(f"Unknown path: {path}")
@@ -488,19 +499,44 @@ class SpaRecognitionApi:
         if player_id is None:
             local_warnings.append(_warning("AI_PLAYER_MISSING", "player_id is required.", "recalculate", "warn"))
 
+        logger.info(
+            "[AI][ask] input session_id=%s tile_id=%s player_id=%s observed_tokens=%s structures=%s",
+            session_id,
+            tile_id,
+            player_id,
+            len(current.map_state.observed_tokens),
+            len(current.structures_state.by_tile_id),
+        )
+
         snapshot, adapter_warnings = _build_snapshot_from_session(current)
         local_warnings.extend(adapter_warnings)
+        logger.debug("[AI][ask] snapshot=%s", _snapshot_debug_summary(snapshot))
 
         token_type = TokenType.CUBE
         rationale = "No candidate matched; cube placed as a conservative answer."
-        if tile_id >= 0:
+        updated_map = current.map_state
+        if tile_id >= 0 and player_id is not None:
             try:
-                hypothesis_space = infer_hypothesis_space(snapshot=snapshot)
-                if tile_id in set(hypothesis_space.global_candidate_tiles()):
-                    token_type = TokenType.ROUND
-                    rationale = "Tile is compatible with the current hypothesis space; round placed."
+                if player_id == current.setup.bot_player_id:
+                    engine = _build_engine_from_session(current)
+                    response = engine.answer_for_tile(tile_id=tile_id)
+                    token_type = TokenType.ROUND if response.answered_yes else TokenType.CUBE
+                    rationale = response.rationale or rationale
                 else:
-                    rationale = "Tile is not compatible with the current hypothesis space; cube placed."
+                    hypothesis_space = infer_hypothesis_space(snapshot=snapshot)
+                    logger.debug("[AI][ask] hypothesis=%s", _hypothesis_debug_summary(hypothesis_space))
+                    if tile_id in set(hypothesis_space.global_candidate_tiles()):
+                        token_type = TokenType.ROUND
+                        rationale = "Tile is compatible with the current hypothesis space; round placed."
+                    else:
+                        rationale = "Tile is not compatible with the current hypothesis space; cube placed."
+
+                updated_map = _upsert_token(
+                    map_state=current.map_state,
+                    tile_id=tile_id,
+                    player_id=player_id,
+                    token_type=token_type,
+                )
             except Exception as exc:  # pragma: no cover - defensive fallback
                 local_warnings.append(
                     _warning(
@@ -511,33 +547,16 @@ class SpaRecognitionApi:
                     )
                 )
 
-        if tile_id >= 0 and player_id is not None:
-            filtered_tokens = [
-                token
-                for token in current.map_state.observed_tokens
-                if not (
-                    _coerce_int(token.get("tile_id"), -1) == tile_id
-                    and token.get("player_id") == player_id
-                )
-            ]
-            filtered_tokens.append(
-                {
-                    "tile_id": tile_id,
-                    "player_id": player_id,
-                    "token_type": token_type.value,
-                }
-            )
-            updated_map = MapState(
-                cols=current.map_state.cols,
-                rows=current.map_state.rows,
-                observed_tokens=tuple(filtered_tokens),
-            )
-        else:
-            updated_map = current.map_state
-
         merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
         updated = current.with_updates(map_state=updated_map, phase=current.phase, warnings=merged_warnings)
         self._store.upsert(updated)
+        logger.info(
+            "[AI][ask] output tile_id=%s player_id=%s token_type=%s warnings=%s",
+            tile_id,
+            player_id,
+            token_type.value,
+            len(local_warnings),
+        )
         return ApiResult(
             session=updated,
             warnings=merged_warnings,
@@ -549,6 +568,96 @@ class SpaRecognitionApi:
             },
         )
 
+    def post_ai_answer(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
+        data = payload or {}
+        session_id = str(data.get("session_id", "default"))
+        current = self._store.create_or_get(session_id)
+
+        local_warnings: List[WarningItem] = []
+        tile_id = _coerce_int(data.get("tile_id"), -1)
+        if tile_id < 0:
+            local_warnings.append(_warning("AI_TILE_INVALID", "tile_id must be valid.", "recalculate", "warn"))
+
+        try:
+            engine = _build_engine_from_session(current)
+            response = engine.answer_for_tile(tile_id=tile_id)
+            updated_map = _upsert_token(
+                map_state=current.map_state,
+                tile_id=response.tile_id,
+                player_id=current.setup.bot_player_id,
+                token_type=TokenType.ROUND if response.answered_yes else TokenType.CUBE,
+            )
+            rationale = response.rationale
+            token_type = TokenType.ROUND if response.answered_yes else TokenType.CUBE
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            local_warnings.append(
+                _warning(
+                    "AI_RECALCULATE_FAILED",
+                    f"AI evaluation failed: {exc}",
+                    "recalculate",
+                    "error",
+                )
+            )
+            updated_map = current.map_state
+            rationale = None
+            token_type = None
+
+        merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
+        updated = current.with_updates(map_state=updated_map, phase=current.phase, warnings=merged_warnings)
+        self._store.upsert(updated)
+        return ApiResult(
+            session=updated,
+            warnings=merged_warnings,
+            data={
+                "tile_id": tile_id,
+                "player_id": current.setup.bot_player_id,
+                "token_type": token_type.value if token_type is not None else None,
+                "rationale": rationale,
+            },
+        )
+
+    def post_ai_place_cube(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
+        data = payload or {}
+        session_id = str(data.get("session_id", "default"))
+        current = self._store.create_or_get(session_id)
+
+        local_warnings: List[WarningItem] = []
+        try:
+            engine = _build_engine_from_session(current)
+            placement = engine.place_least_informative_cube()
+            updated_map = _upsert_token(
+                map_state=current.map_state,
+                tile_id=placement.tile_id,
+                player_id=current.setup.bot_player_id,
+                token_type=TokenType.CUBE,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            local_warnings.append(
+                _warning(
+                    "AI_RECALCULATE_FAILED",
+                    f"AI cube placement failed: {exc}",
+                    "recalculate",
+                    "error",
+                )
+            )
+            updated_map = current.map_state
+            placement = None
+
+        merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
+        updated = current.with_updates(map_state=updated_map, phase=current.phase, warnings=merged_warnings)
+        self._store.upsert(updated)
+        return ApiResult(
+            session=updated,
+            warnings=merged_warnings,
+            data={
+                "tile_id": placement.tile_id if placement is not None else None,
+                "player_id": current.setup.bot_player_id,
+                "token_type": TokenType.CUBE.value if placement is not None else None,
+                "score": placement.score if placement is not None else None,
+                "rationale": placement.rationale if placement is not None else None,
+            },
+        )
+
     def post_recalculate(self, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
         data = payload or {}
         session_id = str(data.get("session_id", "default"))
@@ -557,8 +666,17 @@ class SpaRecognitionApi:
         local_warnings: List[WarningItem] = []
         top_k = _positive_int(data.get("top_k"), 5, local_warnings, "recalculate", "top_k")
 
+        logger.info(
+            "[AI][recalculate] input session_id=%s top_k=%s observed_tokens=%s structures=%s",
+            session_id,
+            top_k,
+            len(current.map_state.observed_tokens),
+            len(current.structures_state.by_tile_id),
+        )
+
         snapshot, adapter_warnings = _build_snapshot_from_session(current)
         local_warnings.extend(adapter_warnings)
+        logger.debug("[AI][recalculate] snapshot=%s", _snapshot_debug_summary(snapshot))
 
         if not snapshot.player_ids():
             local_warnings.append(
@@ -573,6 +691,8 @@ class SpaRecognitionApi:
         try:
             hypothesis_space = infer_hypothesis_space(snapshot=snapshot)
             moves = recommend_moves(snapshot=snapshot, hypothesis_space=hypothesis_space, top_k=top_k)
+            logger.debug("[AI][recalculate] hypothesis=%s", _hypothesis_debug_summary(hypothesis_space))
+            logger.debug("[AI][recalculate] moves=%s", _moves_debug_summary(moves))
             ai_state = AiState(
                 hypothesis_space_raw=_serialize_hypothesis_space(hypothesis_space),
                 recommended_moves_raw=tuple(_serialize_recommended_move(move) for move in moves),
@@ -596,6 +716,11 @@ class SpaRecognitionApi:
         merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
         updated = current.with_updates(ai_state=ai_state, phase="review", warnings=merged_warnings)
         self._store.upsert(updated)
+        logger.info(
+            "[AI][recalculate] output recommended_moves=%s warnings=%s",
+            len(ai_state.recommended_moves_raw),
+            len(local_warnings),
+        )
 
         return ApiResult(
             session=updated,
@@ -675,6 +800,66 @@ def _build_snapshot_from_session(session: SessionState) -> Tuple[GameSnapshot, L
     return snapshot, warnings
 
 
+def _build_engine_from_session(session: SessionState) -> CryptidAIEngine:
+    snapshot, _warnings = _build_snapshot_from_session(session)
+    if session.setup.bot_player_id is None:
+        raise ValueError("bot_player_id is required to build the AI engine.")
+    if session.setup.bot_clue_id is None:
+        raise ValueError("bot_clue_id is required to build the AI engine.")
+
+    engine = CryptidAIEngine.from_initial_setup(
+        InitialSetup(
+            board=deepcopy(snapshot.board),
+            turn_order=snapshot.turn_order,
+            bot_player_id=session.setup.bot_player_id,
+            bot_clue_id=session.setup.bot_clue_id,
+            include_inverse_clues=False,
+        )
+    )
+
+    for token in session.map_state.observed_tokens:
+        player_id = token.get("player_id")
+        tile_id = _coerce_int(token.get("tile_id"), -1)
+        token_type = _coerce_token_type(token.get("token_type"))
+        if not isinstance(player_id, str) or tile_id < 0 or token_type is None:
+            continue
+        engine.apply_observation(
+            PlayerResponseEvent(
+                player_id=player_id,
+                tile_id=tile_id,
+                answered_yes=token_type is TokenType.ROUND,
+            )
+        )
+    return engine
+
+
+def _upsert_token(map_state: MapState, tile_id: int, player_id: Optional[str], token_type: TokenType) -> MapState:
+    if not isinstance(player_id, str) or not player_id.strip():
+        return map_state
+
+    normalized_player_id = player_id.strip()
+    filtered_tokens = [
+        token
+        for token in map_state.observed_tokens
+        if not (
+            _coerce_int(token.get("tile_id"), -1) == tile_id
+            and _optional_string(token.get("player_id"), None) == normalized_player_id
+        )
+    ]
+    filtered_tokens.append(
+        {
+            "tile_id": tile_id,
+            "player_id": normalized_player_id,
+            "token_type": token_type.value,
+        }
+    )
+    return MapState(
+        cols=map_state.cols,
+        rows=map_state.rows,
+        observed_tokens=tuple(filtered_tokens),
+    )
+
+
 def _serialize_hypothesis_space(space: HypothesisSpace) -> Dict[str, Any]:
     return {
         "players": [
@@ -704,6 +889,52 @@ def _serialize_recommended_move(move: RecommendedMove) -> Dict[str, Any]:
         "confidence": move.confidence,
         "rationale": move.rationale,
     }
+
+
+def _snapshot_debug_summary(snapshot: GameSnapshot) -> Dict[str, Any]:
+    round_count = 0
+    cube_count = 0
+    structure_count = 0
+    for tile in snapshot.board.tiles.values():
+        round_count += len(tile.round_tokens)
+        cube_count += len(tile.cube_tokens)
+        if tile.structure_type is not None and tile.structure_color is not None:
+            structure_count += 1
+    return {
+        "tiles": len(snapshot.board.tiles),
+        "players": list(snapshot.player_ids()),
+        "turn_order": list(snapshot.turn_order),
+        "bot_player_id": snapshot.bot_player_id,
+        "round_tokens": round_count,
+        "cube_tokens": cube_count,
+        "structures": structure_count,
+    }
+
+
+def _hypothesis_debug_summary(space: HypothesisSpace) -> Dict[str, Any]:
+    return {
+        "players": len(space.players),
+        "unresolved_players": list(space.unresolved_players()),
+        "global_candidate_tiles": len(space.global_candidate_tiles()),
+        "global_guaranteed_tiles": len(space.global_guaranteed_tiles()),
+        "possible_clues_by_player": {
+            player_space.player_id: len(player_space.possible_clue_ids)
+            for player_space in space.players
+        },
+    }
+
+
+def _moves_debug_summary(moves: Sequence[RecommendedMove]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "action_type": move.action_type,
+            "tile_id": move.tile_id,
+            "target_player_id": move.target_player_id,
+            "score": move.score,
+            "confidence": move.confidence,
+        }
+        for move in moves[:3]
+    ]
 
 
 def _warning(code: str, message: str, scope: str, severity: str) -> WarningItem:

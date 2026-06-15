@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Tuple
@@ -17,7 +19,16 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path not in {"/catalog", "/setup", "/board-layout", "/map", "/structures", "/clues", "/recalculate"}:
+        if self.path not in {
+            "/catalog",
+            "/setup",
+            "/board-layout",
+            "/map",
+            "/structures",
+            "/clues",
+            "/ask-ai",
+            "/recalculate",
+        }:
             self._send_json({"error": f"Unknown path: {self.path}"}, HTTPStatus.NOT_FOUND)
             return
 
@@ -60,6 +71,22 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def run(host: str = "127.0.0.1", port: int = 8000) -> Tuple[str, int]:
+    level_name = os.environ.get("SPA_AI_LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        )
+    else:
+        logging.getLogger().setLevel(level)
+
+    logging.getLogger(__name__).info(
+        "Starting SPA backend host=%s port=%s log_level=%s",
+        host,
+        port,
+        level_name,
+    )
     server = ThreadingHTTPServer((host, port), _Handler)
     server.serve_forever()
     return host, port

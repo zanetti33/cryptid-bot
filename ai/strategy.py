@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import List, Literal, Optional, Sequence, Tuple
+from typing import List, Literal, Optional, Sequence, Set, Tuple
 
 from ai.inference import HypothesisSpace, infer_hypothesis_space
 from game_model.state import GameSnapshot
@@ -33,20 +33,41 @@ def recommend_moves(
     snapshot: GameSnapshot,
     top_k: int = 5,
     hypothesis_space: Optional[HypothesisSpace] = None,
+    bot_valid_tile_ids: Optional[Set[int]] = None,
+    claim_threshold: float = 0.35,
 ) -> List[RecommendedMove]:
     """Return ranked action candidates for the current board snapshot.
 
     This first implementation is intentionally heuristic-driven:
-    - prefer immediate claim opportunities on tiles without any cube tokens
+    - prefer immediate claim opportunities on tiles without any cube tokens,
+      but only on tiles that are valid for the bot's own clue (``bot_valid_tile_ids``).
+      If ``bot_valid_tile_ids`` is None the filter is skipped (useful in tests).
     - otherwise propose `ask_could` questions to reduce uncertainty
     """
     if top_k <= 0:
         raise ValueError("top_k must be greater than 0")
+    if not 0.0 <= claim_threshold <= 1.0:
+        raise ValueError("claim_threshold must be between 0 and 1")
 
-    current_hypothesis_space = hypothesis_space or infer_hypothesis_space(snapshot=snapshot)
-    scored_moves = _build_scored_moves(snapshot=snapshot, hypothesis_space=current_hypothesis_space)
+    current_hypothesis_space = hypothesis_space or infer_hypothesis_space(
+        snapshot=snapshot,
+        known_bot_valid_tile_ids=bot_valid_tile_ids,
+    )
+    scored_moves = _build_scored_moves(
+        snapshot=snapshot,
+        hypothesis_space=current_hypothesis_space,
+        bot_valid_tile_ids=bot_valid_tile_ids,
+    )
     if not scored_moves:
         return []
+
+    preferred_action = _preferred_action_type(
+        hypothesis_space=current_hypothesis_space,
+        claim_threshold=claim_threshold,
+    )
+    filtered_moves = [move for move in scored_moves if move.action_type == preferred_action]
+    if filtered_moves:
+        scored_moves = filtered_moves
 
     scored_moves.sort(key=lambda move: (-move.score, move.tile_id, move.target_player_id or ""))
     selected = scored_moves[:top_k]
@@ -65,7 +86,11 @@ def recommend_moves(
     ]
 
 
-def _build_scored_moves(snapshot: GameSnapshot, hypothesis_space: HypothesisSpace) -> List[_ScoredMove]:
+def _build_scored_moves(
+    snapshot: GameSnapshot,
+    hypothesis_space: HypothesisSpace,
+    bot_valid_tile_ids: Optional[Set[int]] = None,
+) -> List[_ScoredMove]:
     scored: List[_ScoredMove] = []
     cubes_by_player = snapshot.cubes_by_player()
     bot_cube_tiles = cubes_by_player.get(snapshot.bot_player_id or "", set())
@@ -79,7 +104,12 @@ def _build_scored_moves(snapshot: GameSnapshot, hypothesis_space: HypothesisSpac
         round_count = len(tile.round_tokens)
         cube_count = len(tile.cube_tokens)
 
-        if cube_count == 0 and tile.tile_id not in bot_cube_tiles:
+        # ask_is is only valid on tiles where the bot's own clue is satisfied.
+        # If bot_valid_tile_ids is None (e.g. in unit tests without a known clue)
+        # the check is skipped so existing test helpers keep working.
+        bot_clue_valid = bot_valid_tile_ids is None or tile.tile_id in bot_valid_tile_ids
+
+        if cube_count == 0 and tile.tile_id not in bot_cube_tiles and bot_clue_valid:
             score = 2.0 + (1.5 * round_count)
             if tile.tile_id in global_guaranteed:
                 score += 1.0
@@ -101,27 +131,17 @@ def _build_scored_moves(snapshot: GameSnapshot, hypothesis_space: HypothesisSpac
             continue
 
         target_cubes = cubes_by_player.get(target_player, set())
-        player_candidates = set(player_space.candidate_tiles)
-        player_guaranteed = set(player_space.guaranteed_tiles)
 
         for tile in snapshot.board.tiles.values():
             if tile.tile_id in target_cubes:
                 continue
 
-            round_count = len(tile.round_tokens)
-            cube_count = len(tile.cube_tokens)
-            total_tokens = round_count + cube_count
-
-            balance = 1.0 - (abs(round_count - cube_count) / float(total_tokens + 1))
-            novelty = 1.0 / float(total_tokens + 1)
-            if tile.tile_id in player_guaranteed:
-                informativeness = 0.2
-            elif tile.tile_id in player_candidates:
-                informativeness = 1.0
-            else:
-                informativeness = 0.6
-
-            score = 1.0 + (0.5 * balance) + (0.2 * novelty) + (0.6 * informativeness)
+            metrics = _expected_clue_elimination_metrics(
+                player_space=player_space,
+                clue_match_tiles_by_id=hypothesis_space.clue_match_tiles_by_id,
+                tile_id=tile.tile_id,
+            )
+            score = metrics["expected_eliminated_clues"]
 
             scored.append(
                 _ScoredMove(
@@ -129,7 +149,13 @@ def _build_scored_moves(snapshot: GameSnapshot, hypothesis_space: HypothesisSpac
                     tile_id=tile.tile_id,
                     target_player_id=target_player,
                     score=score,
-                    rationale="High-information check for unresolved tile.",
+                    rationale=(
+                        "Expected clue reduction: "
+                        f"{metrics['expected_eliminated_clues']:.3f} "
+                        f"(P(yes)={metrics['yes_probability']:.3f}, "
+                        f"drop_yes={metrics['eliminated_if_yes']}, "
+                        f"drop_no={metrics['eliminated_if_no']})."
+                    ),
                 )
             )
 
@@ -158,4 +184,55 @@ def _softmax(scores: Sequence[float]) -> List[float]:
     if total == 0:
         return [1.0 / float(len(scores)) for _ in scores]
     return [value / total for value in exps]
+
+
+def _preferred_action_type(hypothesis_space: HypothesisSpace, claim_threshold: float) -> ActionType:
+    global_candidates = hypothesis_space.global_candidate_tiles()
+    if not global_candidates:
+        return "ask_could"
+    win_probability = 1.0 / float(len(global_candidates))
+    if len(global_candidates) == 1 or win_probability >= claim_threshold:
+        return "ask_is"
+    return "ask_could"
+
+
+def _expected_clue_elimination_metrics(
+    player_space,
+    clue_match_tiles_by_id,
+    tile_id: int,
+) -> dict[str, float | int]:
+    possible_clue_ids = tuple(player_space.possible_clue_ids)
+    clue_count = len(possible_clue_ids)
+    if clue_count == 0:
+        return {
+            "yes_probability": 0.0,
+            "no_probability": 0.0,
+            "eliminated_if_yes": 0,
+            "eliminated_if_no": 0,
+            "expected_eliminated_clues": 0.0,
+        }
+
+    yes_count = 0
+    no_count = 0
+    for clue_id in possible_clue_ids:
+        matching_tiles = set(clue_match_tiles_by_id.get(clue_id, ()))
+        if tile_id in matching_tiles:
+            yes_count += 1
+        else:
+            no_count += 1
+
+    yes_probability = yes_count / float(clue_count)
+    no_probability = no_count / float(clue_count)
+    eliminated_if_yes = no_count
+    eliminated_if_no = yes_count
+    expected_eliminated_clues = (yes_probability * eliminated_if_yes) + (no_probability * eliminated_if_no)
+
+    return {
+        "yes_probability": yes_probability,
+        "no_probability": no_probability,
+        "eliminated_if_yes": eliminated_if_yes,
+        "eliminated_if_no": eliminated_if_no,
+        "expected_eliminated_clues": expected_eliminated_clues,
+    }
+
 

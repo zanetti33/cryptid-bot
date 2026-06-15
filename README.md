@@ -242,6 +242,36 @@ for move in moves:
 "
 ```
 
+### Evaluate Full AI Scenarios
+
+You can evaluate the whole `ai/` package from scenario JSON files that describe:
+
+- board configuration
+- players and turn order
+- the real clue for each player
+- generation settings for synthetic observations
+
+Run the sample scenario:
+
+```bash
+python scripts/evaluate_ai_scenarios.py data/ai_scenarios/default_layout.json
+```
+
+Put your scenario JSON files under `data/ai_scenarios/`.
+If you are starting from a real game played on the standard board, copy and adapt:
+
+- `data/ai_scenarios/default_layout.template.json`
+
+See `docs/AI_SCENARIO_HARNESS.md` for the full field-by-field format.
+
+Run multiple scenarios with overrides:
+
+```bash
+python scripts/evaluate_ai_scenarios.py data/ai_scenarios/*.json --seed 99 --observations 14 --top-k 7
+```
+
+See `docs/AI_SCENARIO_HARNESS.md` for the scenario format and workflow.
+
 ## 🤖 Optional: CNN Training
 
 Train a CNN model for better module recognition:
