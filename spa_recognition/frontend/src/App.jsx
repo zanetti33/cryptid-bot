@@ -154,6 +154,7 @@ export function App() {
   const [aiBusyAction, setAiBusyAction] = useState(null);
   const [warningToast, setWarningToast] = useState(null);
   const [lastAiSyncAt, setLastAiSyncAt] = useState(null);
+  const [initializing, setInitializing] = useState(true);
   const aiSyncTimerRef = useRef(null);
 
   const warnings = useMemo(() => response?.warnings || [], [response]);
@@ -255,6 +256,10 @@ export function App() {
       } catch {
         if (!cancelled) {
           setClueCatalog([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setInitializing(false);
         }
       }
     }
@@ -593,6 +598,12 @@ export function App() {
           {busy ? "Configurazione..." : "Applica layout default"}
         </button>
       </div>
+
+      {initializing ? (
+        <div className="app-init-banner" role="status">
+          Inizializzazione ambiente in corso...
+        </div>
+      ) : null}
 
       <Toolbar
         phase={phase}

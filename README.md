@@ -2,168 +2,36 @@
 
 Modular Discord bot for the board game Cryptid, with clean separation between game logic, board recognition, AI decision-making, and Discord integration.
 
-## 🎯 Current Status
+## Status
 
-**Architecture Version**: 2.0 (Modularized) - Fully refactored
+- ✅ Game logic (`game_model/`), board recognition (`recognition/`), and AI engine (`ai/`) — implemented and tested.
+- ✅ SPA frontend (`spa_recognition/`) — manual board/game entry + AI orchestration, mostly done (layout presets still WIP, see `spa_recognition/plan-spaRecognition.prompt.md`).
+- 🚧 Discord bot integration (`discord_bot/`) — not started yet.
+- 🚧 CLI recognition (`cli_recognition/`) — not started yet.
 
-- ✅ Game model module (core logic, independent)
-- ✅ Board recognition (automatic via image recognition)
-- ✅ CLI recognition module (manual board input - coming soon)
-- ✅ AI decision-making engine
-- 🚧 Discord bot integration (coming soon)
-
-## 🏗️ Architecture Overview
-
-The project is now organized into **5 independent modules**:
+## Architecture
 
 ```
 game_model/      ← Core game logic (no external dependencies)
     ↓
-recognition/     ← Board recognition (interchangeable)
+recognition/     ← Board recognition from screenshots (terrain + optional CNN)
     ↓
-ai/              ← AI strategy engine
+ai/              ← Hypothesis-space inference + move recommendation
     ↓
-spa_recognition/ ← Manual SPA state entry + AI orchestration (MVP V1)
+spa_recognition/ ← Manual SPA state entry + AI orchestration (backend + React frontend)
     ↓
-discord_bot/     ← Discord UI layer (coming soon)
+discord_bot/     ← Discord UI layer (not started)
 ```
 
-Each module can be tested, replaced, or extended independently.
+Each module is independently testable and replaceable. `rules/` and `map_recognition/` are backward-compatibility re-exports of `game_model/` and `recognition/`.
 
-## 📁 Detailed Project Structure
+### Board & game rules
 
-### `game_model/` - Core Game Logic
-**Independent module** - contains pure game logic with zero external dependencies.
+- 108 hex tiles across 6 modules (A-F, normal/flipped), 5 terrain types (forest/mountain/water/desert/swamp).
+- Each player has a hidden clue restricting valid monster locations. Players ask **"Could it be here?"** (single player, round/cube token) or **"Is it here?"** (all players, wins if everyone agrees).
+- Clue definitions: [`clues.md`](clues.md). Board/module data: `data/module_templates.json`, `data/board_slots.json`, `data/clues_catalog.json`.
 
-```
-game_model/
-├── types.py          # TerrainType, TokenType, AnimalTerritory, StructureType, StructureColor
-├── map.py            # Board model, HexTile, 6-neighbor hexagon adjacency
-├── tokens.py         # TokenPlacement, GameState (turn management)
-├── state.py          # GameSnapshot (observation snapshot for AI)
-├── clues.py          # Clue system with predicates (And/Or/Not)
-├── game.py           # Game engine (ask_could, ask_is, turn resolution)
-└── __init__.py       # Public API
-```
-
-**Usage:**
-```python
-from game_model import Board, Game, PlayerState, GameSnapshot
-from game_model.clues import build_clue_catalog
-
-# Create a board
-board = Board.rectangular(cols=12, rows=9)  # 108 hexes
-
-# Create snapshot for AI
-snapshot = GameSnapshot(board=board, bot_player_id="bot")
-
-# Create and play game
-game = Game(board=board, players=[...])
-```
-
-### `recognition/` - Board Recognition
-**Interchangeable module** - automatically recognizes board state from screenshots using terrain classification and CNN.
-
-```
-recognition/
-├── pipeline.py            # Main orchestration (image_to_board_state)
-├── tile_classifier.py     # RGB pixel → TerrainType
-├── board_extractor.py     # Extract hex tiles from image
-├── layout_recognizer.py   # Terrain pattern matching + CNN
-├── module_classifier.py   # CNN model (12 classes: A-F × normal/flipped)
-├── debug_overlay.py       # Debug visualization
-├── dataset.py             # Dataset utilities, label generation
-└── __init__.py            # Public API
-```
-
-**Usage:**
-```python
-from recognition import image_to_board_state
-
-# Terrain-only recognition (fast, no model needed)
-board = image_to_board_state("screenshot.png")
-
-# With CNN model (more accurate if available)
-board = image_to_board_state(
-    "screenshot.png",
-    use_cnn=True,
-    cnn_model_path="models/module_classifier.pt"
-)
-```
-
-### `ai/` - AI Decision-Making
-**Independent module** - bot's tactical reasoning engine.
-
-```
-ai/
-├── inference.py    # Hypothesis space inference
-├── strategy.py     # Move recommendation (scoring, ranking)
-└── __init__.py     # Public API
-```
-
-**Usage:**
-```python
-from ai import infer_hypothesis_space, recommend_moves
-
-hyp_space = infer_hypothesis_space(snapshot)
-moves = recommend_moves(snapshot, hypothesis_space=hyp_space, top_k=5)
-
-for move in moves:
-    print(f"{move.action_type} tile {move.tile_id}: {move.confidence:.2%}")
-```
-
-### `cli_recognition/` - Manual Board Input (Future)
-Alternative recognition module for interactive terminal input.
-
-### `spa_recognition/` - SPA Integration (MVP V1)
-Frontend/backend module for manual board and game state entry, plus AI orchestration through permissive API endpoints.
-
-### `discord_bot/` - Discord Integration (Future)
-Frontend module for Discord API integration.
-
-### Support Modules
-
-- `rules/` - Backward compatibility wrappers (re-export from `game_model/`)
-- `map_recognition/` - Backward compatibility wrappers (re-export from `recognition/`)
-- `spa_recognition/` - SPA backend + minimal React frontend for manual board/game input
-- `data/` - Module templates, board configuration, clue definitions
-- `datasets/map_recognition/` - Labeled training images
-- `tests/` - Unit tests for all modules
-- `scripts/` - Utility scripts (testing, training)
-- `models/` - Trained model weights (CNN classifier)
-- `docs/` - Technical documentation
-
-## 🎮 Game Model
-
-### Board Geometry
-
-- **Total tiles**: 108 (hexagons arranged in 6 sections)
-- **Module layout**: 6 sections (A-F) × 2 orientations (normal/flipped)
-- **Hexagons per module**: 18 (3 rows × 6 columns)
-- **Hexagon adjacency**: 6-neighbor model
-
-### Game Rules
-
-Each player has a hidden clue that defines valid monster locations. Players take turns:
-
-1. **"Could the monster be here?"** - Ask a specific player about a tile
-   - Yes → other player places round token
-   - No → both players place cube tokens
-
-2. **"Is the monster here?"** - Ask all players about a tile
-   - All agree → current player wins
-   - Any disagree → place cube token on rejecting player, continue
-
-### Data Files
-
-- `data/module_templates.json` - 6 canonical modules with terrain and animal territories
-- `data/board_slots.json` - 6 positions where modules are placed
-- `data/clues_catalog.json` - All 20 base clues + inversions
-- `data/board_layout.json` - Current game composition
-
-## 🚀 Getting Started
-
-### Setup (Docker-first)
+## Getting Started (Docker-first)
 
 Only requirement: Docker + Docker Compose.
 
@@ -173,167 +41,40 @@ chmod +x scripts/docker/*.sh
 ./scripts/docker/doctor.sh
 ```
 
-Profiles available in `docker-compose.yml`:
-- `dev` - backend + frontend with hot reload
-- `prod` - backend + static frontend via nginx
-- `test` - Python tests
-- `train` - CNN training (CUDA first, CPU fallback)
+| Command | What it does |
+|---|---|
+| `./scripts/docker/dev.sh` | Backend (`:8000`) + frontend hot-reload (`:5173`) |
+| `./scripts/docker/prod.sh` | Backend + static frontend via nginx (`:8080`) |
+| `./scripts/docker/test.sh` | Run the Python test suite |
+| `./scripts/docker/train.sh` | Train the CNN module classifier (CUDA, falls back to CPU) |
 
-### Run Tests
+SPA backend endpoints (all `POST`, see `spa_recognition/backend/api.py`): `/catalog`, `/setup`, `/board-layout`, `/map`, `/structures`, `/clues`, `/ask-ai`, `/ai-answer`, `/ai-place-cube`, `/recalculate`, `/simulate-observations`.
 
-```bash
-./scripts/docker/test.sh
-```
-
-### Run Development Stack (Backend + Frontend)
-
-```bash
-./scripts/docker/dev.sh
-```
-
-Backend: `http://127.0.0.1:8000`  
-Frontend (Vite): `http://127.0.0.1:5173`
-
-Available endpoints (POST):
-- `/setup`
-- `/map`
-- `/structures`
-- `/clues`
-- `/recalculate`
-
-### Run Production-like Stack
-
-```bash
-./scripts/docker/prod.sh
-```
-
-Frontend is served by nginx on `http://127.0.0.1:8080`.
-
-### Run SPA Recognition Demo Flow (CLI)
-
-```bash
-docker compose --profile dev run --rm backend-dev python -m spa_recognition.backend.demo_runner
-```
-
-### Load Board from Image
-
-```bash
-docker compose --profile dev run --rm backend-dev python -c "
-from recognition import image_to_board_state
-board = image_to_board_state('screenshot.png')
-print(f'Board loaded with {len(board.tiles)} tiles')
-"
-```
-
-### Use AI to Recommend Moves
-
-```bash
-docker compose --profile dev run --rm backend-dev python -c "
-from game_model import GameSnapshot
-from ai import recommend_moves
-from recognition import image_to_board_state
-
-board = image_to_board_state('screenshot.png')
-snapshot = GameSnapshot(board=board, bot_player_id='bot')
-moves = recommend_moves(snapshot, top_k=5)
-
-for move in moves:
-    print(f'{move.action_type} tile {move.tile_id}: confidence {move.confidence:.1%}')
-"
-```
-
-### Evaluate Full AI Scenarios
-
-You can evaluate the whole `ai/` package from scenario JSON files that describe:
-
-- board configuration
-- players and turn order
-- the real clue for each player
-- generation settings for synthetic observations
-
-Run the sample scenario:
+### Evaluate AI scenarios
 
 ```bash
 python scripts/evaluate_ai_scenarios.py data/ai_scenarios/default_layout.json
 ```
 
-Put your scenario JSON files under `data/ai_scenarios/`.
-If you are starting from a real game played on the standard board, copy and adapt:
+Runs the `ai/` package against a JSON scenario (board, players, clues) and reports the recommended moves. Full format in `docs/AI_SCENARIO_HARNESS.md`.
 
-- `data/ai_scenarios/default_layout.template.json`
+### Static demo (GitHub Pages)
 
-See `docs/AI_SCENARIO_HARNESS.md` for the full field-by-field format.
+`spa_recognition/frontend` also builds as a fully static site, published at
+**https://zanetti33.github.io/cryptid-bot/** via `.github/workflows/deploy-pages.yml`.
+It runs the same `SpaRecognitionApi`/`game_model`/`ai` Python logic entirely
+in-browser via [Pyodide](https://pyodide.org/) — no backend at all. Session
+state lives only in the browser tab and is lost on reload. This is separate
+from the Docker dev/prod flow above, which still talks to a real Python
+backend; build it yourself with `VITE_USE_PYODIDE=true npm run build` in
+`spa_recognition/frontend`.
 
-Run multiple scenarios with overrides:
+## Documentation
 
-```bash
-python scripts/evaluate_ai_scenarios.py data/ai_scenarios/*.json --seed 99 --observations 14 --top-k 7
-```
-
-See `docs/AI_SCENARIO_HARNESS.md` for the scenario format and workflow.
-
-## 🤖 Optional: CNN Training
-
-Train a CNN model for better module recognition:
-
-```bash
-./scripts/docker/train.sh --epochs 50 --batch-size 32 --output models/module_classifier.pt
-```
-
-Then use it:
-
-```bash
-board = image_to_board_state(
-    "screenshot.png",
-    use_cnn=True,
-    cnn_model_path="models/module_classifier.pt",
-    cnn_weight=0.5  # Balance CNN vs terrain matching
-)
-```
-
-## 📚 Documentation
-
-- `docs/DOCKER_WORKFLOWS.md` - Docker-first workflows (dev/prod/test/train)
-- `docs/SPA_RECOGNITION_SPEC.md` - SPA Recognition MVP specification and milestones
-- `REFACTORING_COMPLETE.md` - Full architecture documentation
-- `clues.md` - Game clues and their descriptions
-- `AGENTS.md` - Coding guidelines and practices
-
-## 🧪 Testing Examples
-
-```python
-# Test game logic
-from game_model import Board, Game, PlayerState
-
-board = Board.rectangular(12, 9)
-players = [
-    PlayerState(player_id="p1", clue_id="clue_1"),
-    PlayerState(player_id="p2", clue_id="clue_2"),
-]
-game = Game(board=board, players=players)
-
-# Test AI
-from ai import infer_hypothesis_space, recommend_moves
-from game_model import GameSnapshot
-
-snapshot = GameSnapshot(board=board, bot_player_id="p1")
-hyp = infer_hypothesis_space(snapshot)
-moves = recommend_moves(snapshot, hypothesis_space=hyp)
-assert len(moves) > 0
-
-# Test recognition
-from recognition import image_to_board_state
-
-board = image_to_board_state("test_image.png")
-assert len(board.tiles) == 108
-```
-
-## 📝 Development Principles
-
-- **Separation of Concerns**: Each module does one thing
-- **Testability**: All modules are independently testable
-- **Modularity**: Easy to replace or extend any component
-- **Code Clarity**: Prefer readability over cleverness
-- **Documentation**: Clear code with meaningful comments
-
-See `AGENTS.md` for detailed coding guidelines.
+- [`AGENTS.md`](AGENTS.md) — coding guidelines and project status
+- [`docs/DOCKER_WORKFLOWS.md`](docs/DOCKER_WORKFLOWS.md) — Docker profiles in detail
+- [`docs/SPA_RECOGNITION_SPEC.md`](docs/SPA_RECOGNITION_SPEC.md) / [`spa_recognition/plan-spaRecognition.prompt.md`](spa_recognition/plan-spaRecognition.prompt.md) — SPA spec and milestone backlog
+- [`docs/AI_STRATEGY.md`](docs/AI_STRATEGY.md) — AI design notes and mapping to actual code
+- [`docs/AI_SCENARIO_HARNESS.md`](docs/AI_SCENARIO_HARNESS.md) — AI scenario evaluation format
+- [`docs/CNN_MODULE_RECOGNITION.md`](docs/CNN_MODULE_RECOGNITION.md) — optional CNN module recognition (requires training)
+- [`clues.md`](clues.md) — game clues reference
