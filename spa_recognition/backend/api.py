@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
+import json
 import logging
 import random
+import threading
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ai import CryptidAIEngine, InitialSetup
@@ -37,6 +40,39 @@ class SpaRecognitionApi:
 
     def __init__(self, session_store: Optional[SessionStore] = None) -> None:
         self._store = session_store or SessionStore()
+        # Memoizes infer_hypothesis_space() per session: the CSP solve it runs is the
+        # most expensive part of the AI pipeline, and repeated calls (manual button
+        # click + the frontend's debounced auto-sync, or ask-ai followed by recalculate)
+        # routinely happen with unchanged session state. Guarded by a lock because
+        # http_server.py shares one SpaRecognitionApi instance across request threads.
+        self._hypothesis_cache: Dict[str, Tuple[str, HypothesisSpace]] = {}
+        self._hypothesis_cache_lock = threading.Lock()
+
+    def _infer_hypothesis_space_cached(
+        self,
+        session: SessionState,
+        snapshot: GameSnapshot,
+        include_inverse_clues: bool,
+        known_bot_valid_tile_ids: Optional[Iterable[int]] = None,
+    ) -> HypothesisSpace:
+        fingerprint = _hypothesis_space_fingerprint(session, include_inverse_clues)
+        with self._hypothesis_cache_lock:
+            cached = self._hypothesis_cache.get(session.session_id)
+            if cached is not None and cached[0] == fingerprint:
+                hypothesis_space = cached[1]
+            else:
+                hypothesis_space = infer_hypothesis_space(
+                    snapshot=snapshot,
+                    include_inverse_clues=include_inverse_clues,
+                )
+                self._hypothesis_cache[session.session_id] = (fingerprint, hypothesis_space)
+
+        if known_bot_valid_tile_ids is not None:
+            hypothesis_space = replace(
+                hypothesis_space,
+                known_bot_valid_tile_ids=tuple(sorted(set(known_bot_valid_tile_ids))),
+            )
+        return hypothesis_space
 
     def post(self, path: str, payload: Optional[Dict[str, Any]] = None) -> ApiResult:
         if path == "/catalog":
@@ -519,6 +555,7 @@ class SpaRecognitionApi:
         token_type = TokenType.CUBE
         rationale = "No candidate matched; cube placed as a conservative answer."
         updated_map = current.map_state
+        is_approximate = False
         if tile_id >= 0 and player_id is not None:
             try:
                 if player_id == current.setup.bot_player_id:
@@ -527,7 +564,22 @@ class SpaRecognitionApi:
                     token_type = TokenType.ROUND if response.answered_yes else TokenType.CUBE
                     rationale = response.rationale or rationale
                 else:
-                    hypothesis_space = infer_hypothesis_space(snapshot=snapshot, include_inverse_clues=current.setup.include_inverse_clues)
+                    hypothesis_space = self._infer_hypothesis_space_cached(
+                        session=current,
+                        snapshot=snapshot,
+                        include_inverse_clues=current.setup.include_inverse_clues,
+                    )
+                    is_approximate = hypothesis_space.is_approximate
+                    if is_approximate:
+                        local_warnings.append(
+                            _warning(
+                                "AI_HYPOTHESIS_APPROXIMATED",
+                                "AI reasoning exceeded its time budget; using a faster, less"
+                                " complete heuristic (good, not optimal) instead of the full solve.",
+                                "recalculate",
+                                "info",
+                            )
+                        )
                     logger.debug("[AI][ask] hypothesis=%s", _hypothesis_debug_summary(hypothesis_space))
                     if tile_id in set(hypothesis_space.global_candidate_tiles()):
                         token_type = TokenType.ROUND
@@ -569,6 +621,7 @@ class SpaRecognitionApi:
                 "player_id": player_id,
                 "token_type": token_type.value,
                 "rationale": rationale,
+                "ai_mode": "approximate" if is_approximate else "optimal",
             },
         )
 
@@ -692,8 +745,24 @@ class SpaRecognitionApi:
                 )
             )
 
+        is_approximate = False
         try:
-            hypothesis_space = infer_hypothesis_space(snapshot=snapshot, include_inverse_clues=current.setup.include_inverse_clues)
+            hypothesis_space = self._infer_hypothesis_space_cached(
+                session=current,
+                snapshot=snapshot,
+                include_inverse_clues=current.setup.include_inverse_clues,
+            )
+            is_approximate = hypothesis_space.is_approximate
+            if is_approximate:
+                local_warnings.append(
+                    _warning(
+                        "AI_HYPOTHESIS_APPROXIMATED",
+                        "AI reasoning exceeded its time budget; using a faster, less complete"
+                        " heuristic (good, not optimal) instead of the full solve.",
+                        "recalculate",
+                        "info",
+                    )
+                )
             moves = recommend_moves(snapshot=snapshot, hypothesis_space=hypothesis_space, top_k=top_k)
             logger.debug("[AI][recalculate] hypothesis=%s", _hypothesis_debug_summary(hypothesis_space))
             logger.debug("[AI][recalculate] moves=%s", _moves_debug_summary(moves))
@@ -704,6 +773,7 @@ class SpaRecognitionApi:
                     "global_candidate_tiles": list(hypothesis_space.global_candidate_tiles()),
                     "global_guaranteed_tiles": list(hypothesis_space.global_guaranteed_tiles()),
                     "top_move": _serialize_recommended_move(moves[0]) if moves else None,
+                    "ai_mode": "approximate" if is_approximate else "optimal",
                 },
             )
         except Exception as exc:  # pragma: no cover - defensive fallback
@@ -733,6 +803,7 @@ class SpaRecognitionApi:
                 "hypothesis_space": ai_state.hypothesis_space_raw,
                 "recommended_moves": [dict(move) for move in ai_state.recommended_moves_raw],
                 "ui_payload": dict(ai_state.ui_payload),
+                "ai_mode": "approximate" if is_approximate else "optimal",
             },
         )
 
@@ -805,6 +876,26 @@ class SpaRecognitionApi:
                 "generated_count": len(generated_tokens),
             },
         )
+
+
+def _hypothesis_space_fingerprint(session: SessionState, include_inverse_clues: bool) -> str:
+    """Content fingerprint of everything infer_hypothesis_space()'s result depends on.
+
+    Mirrors exactly the fields _build_snapshot_from_session() reads (board tiles,
+    structures, observed tokens, turn order, bot player) plus include_inverse_clues.
+    Value-based on purpose (not id()-based): SessionState sub-objects are replaced
+    wholesale on update, but relying on object identity for cache correctness would
+    be fragile (CPython can reuse the id() of a garbage-collected object).
+    """
+    payload = {
+        "board_tiles": [dict(tile) for tile in session.board_layout_state.board_tiles],
+        "structures": {str(tile_id): dict(value) for tile_id, value in session.structures_state.by_tile_id.items()},
+        "observed_tokens": [dict(token) for token in session.map_state.observed_tokens],
+        "turn_order": list(session.setup.turn_order),
+        "bot_player_id": session.setup.bot_player_id,
+        "include_inverse_clues": include_inverse_clues,
+    }
+    return json.dumps(payload, sort_keys=True)
 
 
 def _build_snapshot_from_session(session: SessionState) -> Tuple[GameSnapshot, List[WarningItem]]:
@@ -1103,6 +1194,7 @@ def _serialize_hypothesis_space(space: HypothesisSpace) -> Dict[str, Any]:
         "global_candidate_tiles": list(space.global_candidate_tiles()),
         "global_guaranteed_tiles": list(space.global_guaranteed_tiles()),
         "unresolved_players": list(space.unresolved_players()),
+        "is_approximate": space.is_approximate,
     }
 
 
@@ -1114,6 +1206,7 @@ def _serialize_recommended_move(move: RecommendedMove) -> Dict[str, Any]:
         "score": move.score,
         "confidence": move.confidence,
         "rationale": move.rationale,
+        "is_approximate": move.is_approximate,
     }
 
 

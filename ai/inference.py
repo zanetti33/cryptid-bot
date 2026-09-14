@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
+import time
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from game_model.clues import Clue, build_clue_catalog
@@ -9,6 +10,17 @@ from game_model.state import GameSnapshot
 
 
 logger = logging.getLogger(__name__)
+
+# Above this, the multi-player CSP solve in _globally_feasible_clue_ids_by_player
+# is aborted and infer_hypothesis_space() falls back to local-only filtering (see
+# docs/AI_STRATEGY.md, criticality #1 - the solve can blow up combinatorially with
+# few observations and 4+ players). Comfortably above every measured legitimate
+# case (worst measured: 3 players + 48 clues at start of game, ~150ms).
+DEFAULT_HYPOTHESIS_TIME_BUDGET_SECONDS = 1.5
+
+
+class _BacktrackBudgetExceeded(Exception):
+    """Internal sentinel: unwinds the backtracking search once its budget is exceeded."""
 
 
 @dataclass(slots=True, frozen=True)
@@ -33,6 +45,11 @@ class HypothesisSpace:
     players: Tuple[PlayerHypothesisSpace, ...]
     known_bot_valid_tile_ids: Tuple[int, ...] = ()
     clue_match_tiles_by_id: Dict[str, Tuple[int, ...]] = field(default_factory=dict)
+    is_approximate: bool = False
+    """True when the CSP time budget was exceeded and per-player possible_clue_ids
+    were computed from local (own-observations-only) filtering instead of the full
+    multi-player consistency solve. Sound (never under-counts a true candidate or
+    over-counts a guaranteed tile) but less complete - see docs/AI_STRATEGY.md."""
 
     def by_player(self) -> Dict[str, PlayerHypothesisSpace]:
         return {space.player_id: space for space in self.players}
@@ -68,6 +85,7 @@ def infer_hypothesis_space(
     clues: Optional[Sequence[Clue]] = None,
     include_inverse_clues: bool = False,
     known_bot_valid_tile_ids: Optional[Iterable[int]] = None,
+    time_budget_seconds: Optional[float] = None,
 ) -> HypothesisSpace:
     """Build per-player clue/tile hypothesis spaces from observed round/cube tokens.
 
@@ -79,6 +97,11 @@ def infer_hypothesis_space(
     When ``known_bot_valid_tile_ids`` is provided, only the *global* candidate /
     guaranteed tile computations are additionally restricted by the bot's real clue.
     The bot's own per-player hypothesis space is intentionally left untouched.
+
+    ``time_budget_seconds`` bounds the multi-player CSP solve that computes each
+    player's globally-feasible clues; ``None`` uses ``DEFAULT_HYPOTHESIS_TIME_BUDGET_SECONDS``.
+    If the budget is exceeded, falls back to local-only filtering (own observations
+    only, no cross-player consistency) and sets ``HypothesisSpace.is_approximate``.
     """
     logger.debug(
         "[AI][infer] input players=%s board_tiles=%s include_inverse_clues=%s explicit_clues=%s",
@@ -120,16 +143,36 @@ def infer_hypothesis_space(
             possible_clue_ids.append(clue.clue_id)
         local_possible_clue_ids_by_player[player_id] = tuple(sorted(possible_clue_ids))
 
+    effective_budget = (
+        DEFAULT_HYPOTHESIS_TIME_BUDGET_SECONDS if time_budget_seconds is None else time_budget_seconds
+    )
+    deadline = time.monotonic() + effective_budget
+
     globally_feasible_clue_ids_by_player = _globally_feasible_clue_ids_by_player(
         player_ids=player_ids,
         local_possible_clue_ids_by_player=local_possible_clue_ids_by_player,
         clue_match_tiles=clue_match_tiles,
+        deadline=deadline,
     )
+
+    is_approximate = globally_feasible_clue_ids_by_player is None
+    if is_approximate:
+        logger.warning(
+            "[AI][infer] CSP solve exceeded %.2fs budget (players=%s) - falling back to local-only filtering",
+            effective_budget,
+            len(player_ids),
+        )
+        feasible_clue_ids_by_player: Dict[str, Set[str]] = {
+            player_id: set(local_possible_clue_ids_by_player.get(player_id, ()))
+            for player_id in player_ids
+        }
+    else:
+        feasible_clue_ids_by_player = globally_feasible_clue_ids_by_player
 
     players: List[PlayerHypothesisSpace] = []
     clue_by_id = {clue.clue_id: clue for clue in valid_clues}
     for player_id in player_ids:
-        possible_clue_ids = tuple(sorted(globally_feasible_clue_ids_by_player.get(player_id, set())))
+        possible_clue_ids = tuple(sorted(feasible_clue_ids_by_player.get(player_id, set())))
         possible_clues = [clue_by_id[clue_id] for clue_id in possible_clue_ids if clue_id in clue_by_id]
 
         candidate_tiles = _union_tiles(possible_clues, clue_match_tiles)
@@ -153,13 +196,15 @@ def infer_hypothesis_space(
             clue_id: tuple(sorted(tile_ids))
             for clue_id, tile_ids in clue_match_tiles.items()
         },
+        is_approximate=is_approximate,
     )
     logger.debug(
-        "[AI][infer] output players=%s unresolved=%s global_candidates=%s global_guaranteed=%s",
+        "[AI][infer] output players=%s unresolved=%s global_candidates=%s global_guaranteed=%s is_approximate=%s",
         len(result.players),
         len(result.unresolved_players()),
         len(result.global_candidate_tiles()),
         len(result.global_guaranteed_tiles()),
+        result.is_approximate,
     )
     return result
 
@@ -191,7 +236,10 @@ def _globally_feasible_clue_ids_by_player(
     player_ids: Sequence[str],
     local_possible_clue_ids_by_player: Dict[str, Tuple[str, ...]],
     clue_match_tiles: Dict[str, Set[int]],
-) -> Dict[str, Set[str]]:
+    deadline: Optional[float] = None,
+) -> Optional[Dict[str, Set[str]]]:
+    """Returns None (instead of raising) if the search exceeds ``deadline``
+    (a ``time.monotonic()`` value) - the caller decides how to fall back."""
     for player_id in player_ids:
         if not local_possible_clue_ids_by_player.get(player_id):
             return {key: set() for key in player_ids}
@@ -205,6 +253,9 @@ def _globally_feasible_clue_ids_by_player(
         intersection: Optional[Set[int]],
         selected_clues: Dict[str, str],
     ) -> None:
+        if deadline is not None and time.monotonic() > deadline:
+            raise _BacktrackBudgetExceeded()
+
         if index == len(ordered_players):
             if intersection is not None and len(intersection) == 1:
                 for player_id, clue_id in selected_clues.items():
@@ -234,7 +285,10 @@ def _globally_feasible_clue_ids_by_player(
             backtrack(index + 1, used_clues | {clue_id}, next_intersection, selected_clues)
             selected_clues.pop(player_id, None)
 
-    backtrack(index=0, used_clues=set(), intersection=None, selected_clues={})
+    try:
+        backtrack(index=0, used_clues=set(), intersection=None, selected_clues={})
+    except _BacktrackBudgetExceeded:
+        return None
     return feasible_by_player
 
 

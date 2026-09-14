@@ -206,3 +206,51 @@ def test_recommend_moves_threshold_switches_between_ask_could_and_ask_is() -> No
     assert all(move.action_type == "ask_is" for move in ask_is_moves)
 
 
+def test_recommend_moves_approximate_mode_targets_only_most_uncertain_player() -> None:
+    """In fallback ("good, not optimal") mode, ask_could should only be scored for
+    the single most uncertain player (most possible_clue_ids), not every player."""
+    board = Board.rectangular(cols=3, rows=1)
+    snapshot = GameSnapshot(board=board, turn_order=("bot", "p1", "p2"), bot_player_id="bot")
+
+    hypothesis_space = HypothesisSpace(
+        players=(
+            PlayerHypothesisSpace(
+                player_id="bot",
+                possible_clue_ids=("b",),
+                candidate_tiles=(0, 1, 2),
+                guaranteed_tiles=(),
+                eliminated_tiles=(),
+            ),
+            PlayerHypothesisSpace(
+                player_id="p1",
+                possible_clue_ids=("c1", "c2"),
+                candidate_tiles=(0, 1, 2),
+                guaranteed_tiles=(),
+                eliminated_tiles=(),
+            ),
+            PlayerHypothesisSpace(
+                player_id="p2",
+                possible_clue_ids=("c3", "c4", "c5"),
+                candidate_tiles=(0, 1, 2),
+                guaranteed_tiles=(),
+                eliminated_tiles=(),
+            ),
+        ),
+        clue_match_tiles_by_id={
+            "b": (0, 1, 2),
+            "c1": (0,),
+            "c2": (1, 2),
+            "c3": (0,),
+            "c4": (1,),
+            "c5": (2,),
+        },
+        is_approximate=True,
+    )
+
+    moves = recommend_moves(snapshot=snapshot, hypothesis_space=hypothesis_space, top_k=10, claim_threshold=0.35)
+
+    ask_could_targets = {move.target_player_id for move in moves if move.action_type == "ask_could"}
+    assert ask_could_targets == {"p2"}, "only the most uncertain player (p2, 3 possible clues) should be targeted"
+    assert all(move.is_approximate for move in moves)
+
+

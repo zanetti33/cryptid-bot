@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 
 from ai.events import PlayerResponseEvent
-from ai.inference import infer_hypothesis_space
+from ai.inference import PlayerHypothesisSpace, infer_hypothesis_space
 from ai.knowledge_update import KnowledgeTracker
 from ai.strategy import RecommendedMove, recommend_moves
 from ai.types import AICubePlacement, AIDebugState, AIMove, AIResponse, InitialSetup
@@ -69,6 +69,7 @@ class CryptidAIEngine:
             score=best.score,
             confidence=best.confidence,
             rationale=best.rationale,
+            is_approximate=best.is_approximate,
         )
 
     def is_cell_valid_for_me(self, tile_id: int) -> bool:
@@ -102,11 +103,28 @@ class CryptidAIEngine:
         if not candidate_tile_ids:
             raise ValueError("No valid cube placement available for the bot.")
 
+        # Computed once: identical for every candidate tile, independent of which one is being scored.
+        current_hypothesis = infer_hypothesis_space(snapshot=snapshot, clues=self._setup.clues)
+        current_bot_space = current_hypothesis.by_player().get(self._setup.bot_player_id)
+
+        # If the CSP solve already timed out once for this snapshot, don't let each of the
+        # (potentially ~100) per-tile simulated calls below independently re-attempt and
+        # re-time-out the same expensive solve - go straight to the cheap local-only path.
+        # A zero budget doesn't reliably force an immediate fallback on trivially
+        # small searches (the deadline may not be exceeded before the first check);
+        # a negative budget guarantees the deadline is already in the past.
+        per_tile_time_budget = -1.0 if current_hypothesis.is_approximate else None
+
         best_tile_id = candidate_tile_ids[0]
         best_score = float("inf")
         best_rationale: Optional[str] = None
         for tile_id in candidate_tile_ids:
-            score = self._cube_information_score(snapshot=snapshot, tile_id=tile_id)
+            score = self._cube_information_score(
+                snapshot=snapshot,
+                tile_id=tile_id,
+                current_bot_space=current_bot_space,
+                time_budget_seconds=per_tile_time_budget,
+            )
             if score < best_score or (score == best_score and tile_id < best_tile_id):
                 best_tile_id = tile_id
                 best_score = score
@@ -182,16 +200,24 @@ class CryptidAIEngine:
         tile = self._tile_by_id(tile_id)
         return my_clue.matches(tile, self._setup.board)
 
-    def _cube_information_score(self, snapshot: GameSnapshot, tile_id: int) -> float:
-        simulated_snapshot = self._snapshot_with_bot_observation(snapshot=snapshot, tile_id=tile_id, answered_yes=False)
-        hypothesis = infer_hypothesis_space(snapshot=simulated_snapshot, clues=self._setup.clues)
-        bot_space = hypothesis.by_player().get(self._setup.bot_player_id)
-        if bot_space is None:
+    def _cube_information_score(
+        self,
+        snapshot: GameSnapshot,
+        tile_id: int,
+        current_bot_space: Optional[PlayerHypothesisSpace],
+        time_budget_seconds: Optional[float] = None,
+    ) -> float:
+        if current_bot_space is None:
             return float("inf")
 
-        current_hypothesis = infer_hypothesis_space(snapshot=snapshot, clues=self._setup.clues)
-        current_bot_space = current_hypothesis.by_player().get(self._setup.bot_player_id)
-        if current_bot_space is None:
+        simulated_snapshot = self._snapshot_with_bot_observation(snapshot=snapshot, tile_id=tile_id, answered_yes=False)
+        hypothesis = infer_hypothesis_space(
+            snapshot=simulated_snapshot,
+            clues=self._setup.clues,
+            time_budget_seconds=time_budget_seconds,
+        )
+        bot_space = hypothesis.by_player().get(self._setup.bot_player_id)
+        if bot_space is None:
             return float("inf")
 
         eliminated_clues = len(current_bot_space.possible_clue_ids) - len(bot_space.possible_clue_ids)

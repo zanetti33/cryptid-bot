@@ -464,6 +464,85 @@ def test_spa_recalculate_returns_hypothesis_space_and_moves() -> None:
     assert len(recalc_result["data"]["recommended_moves"]) <= 3
 
 
+def test_spa_recalculate_reuses_cached_hypothesis_space(monkeypatch) -> None:
+    import spa_recognition.backend.api as api_module
+
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s-cache",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s-cache",
+        "placements": _default_board_layout(),
+    })
+    api.post("/map", {
+        "session_id": "s-cache",
+        "observed_tokens": [
+            {"tile_id": 0, "player_id": "alpha", "token_type": "cube"},
+            {"tile_id": 3, "player_id": "beta", "token_type": "round"},
+        ],
+    })
+
+    call_count = {"n": 0}
+    original_infer = api_module.infer_hypothesis_space
+
+    def counting_infer(*args, **kwargs):
+        call_count["n"] += 1
+        return original_infer(*args, **kwargs)
+
+    monkeypatch.setattr(api_module, "infer_hypothesis_space", counting_infer)
+
+    first = api.post("/recalculate", {"session_id": "s-cache", "top_k": 3}).to_dict()
+    second = api.post("/recalculate", {"session_id": "s-cache", "top_k": 3}).to_dict()
+
+    assert call_count["n"] == 1
+    assert first["data"]["recommended_moves"] == second["data"]["recommended_moves"]
+    assert first["data"]["hypothesis_space"] == second["data"]["hypothesis_space"]
+
+    # Changing the board state must invalidate the cache and force a real recompute.
+    api.post("/map", {
+        "session_id": "s-cache",
+        "observed_tokens": [
+            {"tile_id": 0, "player_id": "alpha", "token_type": "cube"},
+            {"tile_id": 3, "player_id": "beta", "token_type": "round"},
+            {"tile_id": 5, "player_id": "beta", "token_type": "cube"},
+        ],
+    })
+    api.post("/recalculate", {"session_id": "s-cache", "top_k": 3})
+    assert call_count["n"] == 2
+
+
+def test_spa_recalculate_reports_approximate_ai_mode_when_budget_exceeded(monkeypatch) -> None:
+    import ai.inference as inference_module
+
+    # Force every infer_hypothesis_space call to exceed its budget immediately,
+    # deterministically exercising the fallback path end-to-end through the API.
+    monkeypatch.setattr(inference_module, "DEFAULT_HYPOTHESIS_TIME_BUDGET_SECONDS", -1.0)
+
+    api = SpaRecognitionApi()
+    api.post("/setup", {
+        "session_id": "s-approx",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "terrain_pair_forest_desert",
+    })
+    api.post("/board-layout", {
+        "session_id": "s-approx",
+        "placements": _default_board_layout(),
+    })
+
+    result = api.post("/recalculate", {"session_id": "s-approx", "top_k": 3}).to_dict()
+
+    assert result["data"]["ai_mode"] == "approximate"
+    assert result["data"]["hypothesis_space"]["is_approximate"] is True
+    assert "AI_HYPOTHESIS_APPROXIMATED" in _warning_codes(result)
+
+
 def test_simulate_observations_distributes_equally_per_player_without_fixed_seed() -> None:
     api = SpaRecognitionApi()
     api.post("/setup", {

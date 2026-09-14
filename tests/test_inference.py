@@ -177,4 +177,36 @@ def test_infer_hypothesis_space_marks_contradictions() -> None:
     assert forest_tile_id in player_space.eliminated_tiles
 
 
+def test_infer_hypothesis_space_falls_back_to_local_filtering_when_budget_exceeded() -> None:
+    board, tile0, tile1, tile2 = _three_tile_board()
+    clue_a, clue_b, clue_c = _three_tile_clues(tile0=tile0, tile1=tile1, tile2=tile2)
+
+    state = GameState(board=board)
+    # p1 can only be clue_b locally; p2 has no constraints yet.
+    state.place_token("p1", 0, 0, TokenType.CUBE)
+    state.place_token("p1", 2, 0, TokenType.CUBE)
+    state.place_token("p1", 1, 0, TokenType.ROUND)
+
+    snapshot = GameSnapshot(board=board, turn_order=("p1", "p2"))
+
+    optimal = infer_hypothesis_space(snapshot=snapshot, clues=(clue_a, clue_b, clue_c))
+    assert optimal.is_approximate is False
+
+    approximate = infer_hypothesis_space(
+        snapshot=snapshot,
+        clues=(clue_a, clue_b, clue_c),
+        time_budget_seconds=-1.0,
+    )
+    assert approximate.is_approximate is True
+
+    optimal_by_player = optimal.by_player()
+    approximate_by_player = approximate.by_player()
+    for player_id in ("p1", "p2"):
+        # Soundness: the fallback's possible_clue_ids is always a superset of the
+        # optimal (globally-consistent) result - it can be less precise, never wrong.
+        assert set(optimal_by_player[player_id].possible_clue_ids) <= set(
+            approximate_by_player[player_id].possible_clue_ids
+        )
+
+
 

@@ -18,6 +18,10 @@ class RecommendedMove:
     score: float
     confidence: float
     rationale: Optional[str] = None
+    is_approximate: bool = False
+    """Mirrors HypothesisSpace.is_approximate: True when this move was computed
+    from the time-budgeted fallback (local-only filtering, one target player)
+    instead of the full multi-player CSP solve."""
 
 
 @dataclass(slots=True, frozen=True)
@@ -81,6 +85,7 @@ def recommend_moves(
             score=move.score,
             confidence=confidence,
             rationale=move.rationale,
+            is_approximate=current_hypothesis_space.is_approximate,
         )
         for move, confidence in zip(selected, confidences)
     ]
@@ -171,7 +176,26 @@ def _target_players(snapshot: GameSnapshot, hypothesis_space: HypothesisSpace) -
         and player_id in hypothesis_by_player
         and not hypothesis_by_player[player_id].is_resolved
     ]
-    return tuple(players)
+    if not players or not hypothesis_space.is_approximate:
+        return tuple(players)
+
+    # Fallback mode ("good, not optimal" - see docs/AI_STRATEGY.md): question
+    # only the single most uncertain player (most still-possible clues, tie
+    # broken by earliest turn order) instead of scoring every unresolved
+    # player x every tile - mirrors the original findMostUnsurePlayer design.
+    turn_order = list(snapshot.turn_order)
+
+    def turn_rank(player_id: str) -> int:
+        return turn_order.index(player_id) if player_id in turn_order else len(turn_order)
+
+    most_unsure = max(
+        players,
+        key=lambda player_id: (
+            len(hypothesis_by_player[player_id].possible_clue_ids),
+            -turn_rank(player_id),
+        ),
+    )
+    return (most_unsure,)
 
 
 def _softmax(scores: Sequence[float]) -> List[float]:

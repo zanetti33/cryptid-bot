@@ -31,6 +31,7 @@ class AIMove:
     score: float = 0.0
     confidence: float = 0.0
     rationale: Optional[str] = None
+    is_approximate: bool = False
 
 
 @dataclass(slots=True, frozen=True)
