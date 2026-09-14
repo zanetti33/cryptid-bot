@@ -10,8 +10,7 @@ from ai.events import PlayerResponseEvent
 from ai.inference import HypothesisSpace, infer_hypothesis_space
 from ai.strategy import RecommendedMove, recommend_moves
 from data.board_loader import load_layout_instance, load_module_templates, load_slots
-from data.clue_loader import load_clue_definitions
-from game_model.clues import clues_by_id
+from game_model.clues import build_clue_catalog, clues_by_id
 from game_model.map import Board, HexTile
 from game_model.state import GameSnapshot
 from game_model.types import AnimalTerritory, StructureColor, StructureType, TerrainType, TokenType
@@ -88,9 +87,9 @@ class SpaRecognitionApi:
         turn_order = _string_tuple(data.get("turn_order"), current.setup.turn_order, local_warnings, "setup", "turn_order")
         bot_player_id = _optional_string(data.get("bot_player_id"), current.setup.bot_player_id)
         bot_clue_id = _optional_string(data.get("bot_clue_id"), current.setup.bot_clue_id)
+        include_inverse_clues = bool(data.get("include_inverse_clues", current.setup.include_inverse_clues))
 
-        clue_definitions = load_clue_definitions()
-        valid_clue_ids = {entry.get("clue_id") for entry in clue_definitions if isinstance(entry.get("clue_id"), str)}
+        valid_clue_ids = set(clues_by_id(include_inverse=include_inverse_clues).keys())
 
         if not player_ids:
             local_warnings.append(_warning("PLAYER_COUNT_UNUSUAL", "No players configured yet.", "setup", "warn"))
@@ -132,6 +131,7 @@ class SpaRecognitionApi:
             turn_order=turn_order,
             bot_player_id=bot_player_id,
             bot_clue_id=bot_clue_id,
+            include_inverse_clues=include_inverse_clues,
         )
         merged_warnings = merge_warnings(current.warnings, tuple(local_warnings))
         updated = current.with_updates(setup=updated_setup, phase="board_layout", warnings=merged_warnings)
@@ -527,7 +527,7 @@ class SpaRecognitionApi:
                     token_type = TokenType.ROUND if response.answered_yes else TokenType.CUBE
                     rationale = response.rationale or rationale
                 else:
-                    hypothesis_space = infer_hypothesis_space(snapshot=snapshot)
+                    hypothesis_space = infer_hypothesis_space(snapshot=snapshot, include_inverse_clues=current.setup.include_inverse_clues)
                     logger.debug("[AI][ask] hypothesis=%s", _hypothesis_debug_summary(hypothesis_space))
                     if tile_id in set(hypothesis_space.global_candidate_tiles()):
                         token_type = TokenType.ROUND
@@ -693,7 +693,7 @@ class SpaRecognitionApi:
             )
 
         try:
-            hypothesis_space = infer_hypothesis_space(snapshot=snapshot)
+            hypothesis_space = infer_hypothesis_space(snapshot=snapshot, include_inverse_clues=current.setup.include_inverse_clues)
             moves = recommend_moves(snapshot=snapshot, hypothesis_space=hypothesis_space, top_k=top_k)
             logger.debug("[AI][recalculate] hypothesis=%s", _hypothesis_debug_summary(hypothesis_space))
             logger.debug("[AI][recalculate] moves=%s", _moves_debug_summary(moves))
@@ -785,6 +785,7 @@ class SpaRecognitionApi:
             ensure_player_polarity_coverage=ensure_player_polarity_coverage,
             distribution_mode=distribution_mode,
             seed=seed,
+            include_inverse_clues=current.setup.include_inverse_clues,
         )
         local_warnings.extend(simulation_warnings)
 
@@ -887,9 +888,10 @@ def _generate_simulated_tokens(
     ensure_player_polarity_coverage: bool,
     distribution_mode: str,
     seed: int,
+    include_inverse_clues: bool = False,
 ) -> Tuple[List[Dict[str, Any]], List[WarningItem]]:
     warnings: List[WarningItem] = []
-    clue_catalog = clues_by_id(include_inverse=False)
+    clue_catalog = clues_by_id(include_inverse=include_inverse_clues)
     rng = random.Random(seed)
 
     normalized_players = []
@@ -1037,7 +1039,7 @@ def _build_engine_from_session(session: SessionState) -> CryptidAIEngine:
             turn_order=snapshot.turn_order,
             bot_player_id=session.setup.bot_player_id,
             bot_clue_id=session.setup.bot_clue_id,
-            include_inverse_clues=False,
+            include_inverse_clues=session.setup.include_inverse_clues,
         )
     )
 
@@ -1176,15 +1178,11 @@ def _build_board_layout_catalog() -> Dict[str, Any]:
     }
 
 
-def _build_clues_catalog() -> List[Dict[str, str]]:
-    clues = []
-    for definition in load_clue_definitions():
-        clue_id = definition.get("clue_id")
-        text = definition.get("text")
-        if not isinstance(clue_id, str) or not isinstance(text, str):
-            continue
-        clues.append({"clue_id": clue_id, "text": text})
-    return clues
+def _build_clues_catalog() -> List[Dict[str, Any]]:
+    return [
+        {"clue_id": clue.clue_id, "text": clue.text, "is_inverse": clue.clue_id.startswith("not_")}
+        for clue in build_clue_catalog(include_inverse=True)
+    ]
 
 
 def _compose_board_from_placements(

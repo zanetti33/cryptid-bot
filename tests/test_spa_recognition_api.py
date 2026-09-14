@@ -513,3 +513,44 @@ def test_simulate_observations_distributes_equally_per_player_without_fixed_seed
     assert by_player == {"bot": 3, "p1": 3, "p2": 3, "p3": 3}
 
 
+def test_spa_catalog_includes_tagged_inverse_clues() -> None:
+    api = SpaRecognitionApi()
+    result = api.post("/catalog", {"session_id": "catalog-inverse"}).to_dict()
+
+    clues = result["data"]["clues_catalog"]
+    assert len(clues) == 48
+    inverse_clues = [clue for clue in clues if clue["is_inverse"]]
+    assert len(inverse_clues) == 24
+    assert any(clue["clue_id"] == "not_terrain_pair_forest_desert" for clue in inverse_clues)
+
+
+def test_spa_setup_rejects_inverse_clue_when_mode_disabled() -> None:
+    api = SpaRecognitionApi()
+    result = api.post("/setup", {
+        "session_id": "advanced-off",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "not_terrain_pair_forest_desert",
+    }).to_dict()
+
+    assert result["session"]["setup"]["include_inverse_clues"] is False
+    assert "SETUP_CLUE_UNKNOWN" in _warning_codes(result)
+
+
+def test_spa_setup_accepts_inverse_clue_when_mode_enabled() -> None:
+    api = SpaRecognitionApi()
+    result = api.post("/setup", {
+        "session_id": "advanced-on",
+        "player_ids": ["alpha", "beta"],
+        "turn_order": ["alpha", "beta"],
+        "bot_player_id": "alpha",
+        "bot_clue_id": "not_terrain_pair_forest_desert",
+        "include_inverse_clues": True,
+    }).to_dict()
+
+    assert result["session"]["setup"]["include_inverse_clues"] is True
+    assert result["session"]["setup"]["bot_clue_id"] == "not_terrain_pair_forest_desert"
+    assert "SETUP_CLUE_UNKNOWN" not in _warning_codes(result)
+
+

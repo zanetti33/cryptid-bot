@@ -222,6 +222,12 @@ button:disabled {
   gap: 6px;
 }
 
+.setup-grid label.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
 .status-row {
   margin-bottom: 12px;
 }

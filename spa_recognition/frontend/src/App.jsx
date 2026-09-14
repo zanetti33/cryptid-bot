@@ -144,6 +144,7 @@ export function App() {
   const [turnOrder, setTurnOrder] = useState(ALL_PLAYER_IDS.slice(0, DEFAULT_PLAYER_COUNT));
   const [botPlayerId, setBotPlayerId] = useState(ALL_PLAYER_IDS[0]);
   const [botClueId, setBotClueId] = useState("");
+  const [includeInverseClues, setIncludeInverseClues] = useState(false);
   const [structureType, setStructureType] = useState("");
   const [structureColor, setStructureColor] = useState("");
   const [tokenPlayerId, setTokenPlayerId] = useState("");
@@ -214,6 +215,13 @@ export function App() {
     setPlayerCount(nextCount);
   }
 
+  function updateIncludeInverseClues(nextValue) {
+    setIncludeInverseClues(nextValue);
+    if (!nextValue) {
+      setBotClueId((current) => (current.startsWith("not_") ? "" : current));
+    }
+  }
+
   function updateTurnOrder(index, playerId) {
     if (!configuredPlayerIds.includes(playerId)) {
       return;
@@ -276,6 +284,7 @@ export function App() {
     const selectedBotPlayerId = overrides?.bot_player_id || botPlayerId;
     const selectedBotClueId = (overrides?.bot_clue_id || botClueId).trim();
     const selectedPlacements = overrides?.placements || placements;
+    const selectedIncludeInverseClues = overrides?.include_inverse_clues ?? includeInverseClues;
     const isValidRequest =
       selectedPlayers.length > 0
       && Boolean(selectedBotPlayerId)
@@ -297,6 +306,7 @@ export function App() {
         turn_order: selectedTurnOrder,
         bot_player_id: selectedBotPlayerId,
         bot_clue_id: selectedBotClueId,
+        include_inverse_clues: selectedIncludeInverseClues,
       });
 
       setBoardCatalog(setup.data?.board_layout_catalog || null);
@@ -321,12 +331,14 @@ export function App() {
     const defaultPlacements = DEFAULT_LAYOUT_SCENARIO.board.placements;
     const defaultStructures = DEFAULT_LAYOUT_SCENARIO.board.structures;
     const defaultSimulation = DEFAULT_LAYOUT_SCENARIO.simulation || {};
+    const defaultIncludeInverseClues = Boolean(DEFAULT_LAYOUT_SCENARIO.include_inverse_clues);
 
     setPlayerCount(defaultPlayerIds.length);
     setTurnOrder(defaultTurnOrder);
     setBotPlayerId(defaultBotPlayerId);
     setBotClueId(defaultBotClueId);
     setPlacements(defaultPlacements);
+    setIncludeInverseClues(defaultIncludeInverseClues);
 
     try {
       await bootstrapSession({
@@ -335,6 +347,7 @@ export function App() {
         bot_player_id: defaultBotPlayerId,
         bot_clue_id: defaultBotClueId,
         placements: defaultPlacements,
+        include_inverse_clues: defaultIncludeInverseClues,
       });
       const boardLayoutResult = await applyBoardLayoutWithPlacements(defaultPlacements);
       const boardTilesFromLayout = boardLayoutResult?.session?.board_layout_state?.board_tiles || [];
@@ -624,11 +637,13 @@ export function App() {
           botPlayerId={botPlayerId}
           botClueId={botClueId}
           clueCatalog={clueCatalog}
+          includeInverseClues={includeInverseClues}
           isBusy={busy}
           onPlayerCountChange={updatePlayerCount}
           onTurnOrderChange={updateTurnOrder}
           onBotPlayerChange={setBotPlayerId}
           onBotClueChange={setBotClueId}
+          onIncludeInverseCluesChange={updateIncludeInverseClues}
           boardCatalog={boardCatalog}
           placements={placements}
           onPlacementChange={updatePlacement}

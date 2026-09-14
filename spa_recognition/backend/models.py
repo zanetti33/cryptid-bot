@@ -34,6 +34,7 @@ class SetupState:
     turn_order: Tuple[str, ...] = ()
     bot_player_id: Optional[str] = None
     bot_clue_id: Optional[str] = None
+    include_inverse_clues: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -41,6 +42,7 @@ class SetupState:
             "turn_order": list(self.turn_order),
             "bot_player_id": self.bot_player_id,
             "bot_clue_id": self.bot_clue_id,
+            "include_inverse_clues": self.include_inverse_clues,
         }
 
 

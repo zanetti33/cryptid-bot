@@ -2,22 +2,23 @@ function clueGroupLabel(clueId) {
   if (typeof clueId !== "string") {
     return "Altre clue";
   }
-  if (clueId.startsWith("terrain_pair_")) {
+  const baseClueId = clueId.startsWith("not_") ? clueId.slice(4) : clueId;
+  if (baseClueId.startsWith("terrain_pair_")) {
     return "Terreno (coppie)";
   }
-  if (clueId.startsWith("within_one_") && !clueId.includes("animal")) {
+  if (baseClueId.startsWith("within_one_") && !baseClueId.includes("animal")) {
     return "Terreno (entro 1)";
   }
-  if (clueId.startsWith("within_one_") && clueId.includes("animal")) {
+  if (baseClueId.startsWith("within_one_") && baseClueId.includes("animal")) {
     return "Animali (entro 1)";
   }
-  if (clueId.startsWith("within_two_") && clueId.includes("territory")) {
+  if (baseClueId.startsWith("within_two_") && baseClueId.includes("territory")) {
     return "Animali (entro 2)";
   }
-  if (clueId.startsWith("within_two_") && (clueId.includes("standing_stone") || clueId.includes("abandoned_shack"))) {
+  if (baseClueId.startsWith("within_two_") && (baseClueId.includes("standing_stone") || baseClueId.includes("abandoned_shack"))) {
     return "Strutture per tipo (entro 2)";
   }
-  if (clueId.startsWith("within_three_") && clueId.includes("structure")) {
+  if (baseClueId.startsWith("within_three_") && baseClueId.includes("structure")) {
     return "Strutture per colore (entro 3)";
   }
   return "Altre clue";
@@ -50,18 +51,21 @@ export function GameSetupForm({
   botPlayerId,
   botClueId,
   clueCatalog,
+  includeInverseClues,
   isBusy,
   onPlayerCountChange,
   onTurnOrderChange,
   onBotPlayerChange,
   onBotClueChange,
+  onIncludeInverseCluesChange,
   boardCatalog,
   placements,
   onPlacementChange,
   onApplyBoardLayout,
   isBoardLayoutComplete,
 }) {
-  const groupedClues = groupCluesByType(clueCatalog);
+  const visibleClues = includeInverseClues ? clueCatalog : clueCatalog.filter((clue) => !clue.is_inverse);
+  const groupedClues = groupCluesByType(visibleClues);
   const slots = boardCatalog?.slots || [];
   const sections = boardCatalog?.sections || [];
   const orientations = boardCatalog?.orientations || ["normal", "flipped"];
@@ -143,6 +147,16 @@ export function GameSetupForm({
               </optgroup>
             ))}
           </select>
+        </label>
+
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={Boolean(includeInverseClues)}
+            onChange={(event) => onIncludeInverseCluesChange(event.target.checked)}
+            disabled={isBusy}
+          />
+          Modalita' avanzata (clue negative)
         </label>
 
       </div>
