@@ -17,7 +17,7 @@ l'harness genera automaticamente un set sintetico di osservazioni (`round`/`cube
 
 Usa come riferimento:
 
-- `data/ai_scenarios/sample_default_layout.json`
+- `data/ai_scenarios/default_layout.json`
 
 ## Dove mettere i file JSON
 
@@ -145,6 +145,7 @@ Usa `default_layout` quando la partita reale è stata giocata sulla mappa standa
 - `simulation.observation_count`: quante osservazioni sintetiche generare
 - `simulation.include_bot_observations`: se `true`, genera anche pseudo-risposte del bot
 - `simulation.ensure_player_polarity_coverage`: prova a generare sia `yes` sia `no` per ogni giocatore quando possibile
+- `simulation.distribution_mode`: `random` (default) oppure `equal_per_player` (distribuisce le osservazioni sintetiche in modo equo tra i giocatori)
 - `evaluation.top_k`: quante mosse AI mostrare nel report
 
 #### Come specificare `board.structures`

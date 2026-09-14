@@ -27,7 +27,10 @@ class _Handler(BaseHTTPRequestHandler):
             "/structures",
             "/clues",
             "/ask-ai",
+            "/ai-answer",
+            "/ai-place-cube",
             "/recalculate",
+            "/simulate-observations",
         }:
             self._send_json({"error": f"Unknown path: {self.path}"}, HTTPStatus.NOT_FOUND)
             return

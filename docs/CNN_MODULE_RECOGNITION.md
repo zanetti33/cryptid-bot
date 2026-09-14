@@ -1,5 +1,12 @@
 # Riconoscimento Automatico di Module Section + Orientation via CNN
 
+> **Stato**: questa feature è **opzionale e non pronta all'uso out-of-the-box**. Il codice (`recognition/module_classifier.py`,
+> `recognition/layout_recognizer.py`) è implementato e testato (`tests/test_module_classifier.py`), ma nessun modello
+> pre-addestrato è incluso nel repository: la cartella `models/` non esiste finché non si esegue un training locale
+> (`scripts/train_module_classifier.py`, vedi sotto). Senza un modello addestrato, `ModuleClassifier(model_path=None)`
+> usa pesi inizializzati casualmente. Il riconoscimento basato solo su pattern matching dei terreni (`use_cnn=False`,
+> `cnn_weight=0.0`) resta il metodo di default funzionante senza training.
+
 ## 🎯 Obiettivo
 
 Implementare un sistema di **riconoscimento automatico** dei 6 moduli della board nelle loro 12 varianti (A-F, normal/flipped) usando una rete neurale convoluzionale (CNN), eliminando così la dipendenza dal file manuale `game_layout_instance.json`.
@@ -28,7 +35,7 @@ Terrains Dict      [CNN Module Classifier]
 ## 📦 Componenti principali
 
 ### 1. `ModuleCNN` (Neural Network)
-**File:** `map_recognition/module_classifier.py`
+**File:** `recognition/module_classifier.py` (nota: esiste anche una copia legacy identica in `map_recognition/module_classifier.py`, mantenuta solo per retrocompatibilità — usare sempre il pacchetto `recognition`)
 
 Architettura CNN:
 - 4 layer convoluzionali con BatchNorm e ReLU
@@ -37,18 +44,18 @@ Architettura CNN:
 - 2 Fully Connected layers (256 → 128 → 12)
 
 ```python
-from map_recognition.module_classifier import ModuleCNN
+from recognition.module_classifier import ModuleCNN
 
 model = ModuleCNN(num_classes=12)  # 12 classi = 6 moduli × 2 orientamenti
 ```
 
 ### 2. `ModuleClassifier` (Wrapper)
-**File:** `map_recognition/module_classifier.py`
+**File:** `recognition/module_classifier.py`
 
 Interfaccia principale per classificare immagini:
 
 ```python
-from map_recognition.module_classifier import ModuleClassifier
+from recognition.module_classifier import ModuleClassifier
 
 # Inizializzare (opzionale con modello pre-addestrato)
 classifier = ModuleClassifier(
@@ -70,13 +77,13 @@ results = classifier.classify_batch([
 ```
 
 ### 3. `recognize_layout_with_cnn()` (Layout Recognition)
-**File:** `map_recognition/layout_recognizer.py`
+**File:** `recognition/layout_recognizer.py`
 
 Riconosce il layout completo della board combinando CNN + terrain matching:
 
 ```python
-from map_recognition.layout_recognizer import recognize_layout_with_cnn
-from map_recognition.module_classifier import ModuleClassifier
+from recognition.layout_recognizer import recognize_layout_with_cnn
+from recognition.module_classifier import ModuleClassifier
 
 classifier = ModuleClassifier(model_path="models/module_classifier.pt")
 
@@ -95,12 +102,12 @@ for prediction in layout_result.slot_predictions:
 ```
 
 ### 4. Pipeline integrata
-**File:** `map_recognition/pipeline.py`
+**File:** `recognition/pipeline.py`
 
 La pipeline ora supporta riconoscimento ibrido:
 
 ```python
-from map_recognition.pipeline import image_to_board_state
+from recognition.pipeline import image_to_board_state
 
 # Con CNN
 board = image_to_board_state(
@@ -129,16 +136,7 @@ ls datasets/map_recognition/labels/
 # output: image_1.json, image_2.json, ...
 ```
 
-### Passo 2: Estrarre patch (Optional)
-
-```bash
-python scripts/extract_module_patches.py \
-    --dataset-path datasets/map_recognition \
-    --output-path datasets/modules_dataset \
-    --patch-size 224
-```
-
-### Passo 3: Addestrare il modello
+### Passo 2: Addestrare il modello
 
 ```bash
 python scripts/train_module_classifier.py \
@@ -179,7 +177,7 @@ Test inclusi:
 ### Validare la pipeline su immagini reali
 
 ```python
-from map_recognition.pipeline import recognize_image
+from recognition.pipeline import recognize_image
 
 board, artifacts = recognize_image(
     "screenshots/board_01.png",

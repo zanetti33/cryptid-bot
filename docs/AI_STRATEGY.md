@@ -1,6 +1,24 @@
 # AI Strategy
 
-## Pseudo-codice per AI decision making:
+## Stato attuale dell'implementazione
+
+Questo documento è nato come **schizzo di design** (pseudocodice) prima dell'implementazione reale ed è
+mantenuto per contesto storico sulle idee alla base dell'algoritmo. Il codice effettivo in `ai/` non usa
+questi nomi di funzione né la struttura a matrice booleana descritta sotto, ma implementa concetti simili:
+
+| Concetto nello pseudocodice | Implementazione reale |
+|---|---|
+| Matrice maestra $M$ (celle × indizi) | Calcolo diretto via `game_model.clues` (predicati `And`/`Or`/`Not` valutati per tile), non materializzato come matrice |
+| Vettore di conoscenza $V^p$ per giocatore | `HypothesisSpace` prodotto da `infer_hypothesis_space()` in [`ai/inference.py`](../ai/inference.py) — tiene traccia delle clue ancora compatibili per ciascun giocatore |
+| `decideNextMove` / `findMostUnsurePlayer` / `findMostInformativeCell` | `recommend_moves()` in [`ai/strategy.py`](../ai/strategy.py) — scoring e ranking delle mosse candidate (ask vs claim) |
+| `giveLessInformativeClue` / `isCellValid` | Gestite nel flusso di aggiornamento incrementale in [`ai/knowledge_update.py`](../ai/knowledge_update.py) a partire dagli eventi in [`ai/events.py`](../ai/events.py) |
+| Orchestrazione turno/mossa | [`ai/engine.py`](../ai/engine.py) (non presente nello schizzo originale) |
+| Valutazione su scenari reali/sintetici | [`ai/scenario_harness.py`](../ai/scenario_harness.py), vedi `docs/AI_SCENARIO_HARNESS.md` (non presente nello schizzo originale) |
+
+Per il comportamento e le firme effettive, fare riferimento al codice in `ai/` e ai relativi test in `tests/`;
+questo documento resta valido come motivazione concettuale ma non come specifica implementativa.
+
+## Pseudo-codice per AI decision making (design originale):
 
 `search(hex)` e `question(player, cell)` sono le due mosse possibili che l'AI può scegliere.
 

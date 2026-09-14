@@ -91,7 +91,14 @@ Esempi warning iniziali:
 
 ## 6) Contratti API V1 (backend)
 
-Tutti gli endpoint V1/V1.1 sono `POST` e operano su una sessione in memoria.
+Tutti gli endpoint sono `POST` e operano su una sessione in memoria. Questo elenco riflette gli endpoint
+effettivamente implementati in `spa_recognition/backend/api.py` (e instradati da `http_server.py`).
+
+### `POST /catalog`
+Restituisce i cataloghi statici disponibili per la UI.
+- Input: session id.
+- Output: `board_layout_catalog` (preset di board disponibili, oggi solo `default_layout` in sola lettura), `clues_catalog`.
+- **Nota**: non esiste ancora un catalogo preset *scrivibile* (`save`/`list` di layout salvati dall'utente) — vedi M7 in `plan-spaRecognition.prompt.md`.
 
 ### `POST /setup`
 Inizializza o aggiorna metadati sessione.
@@ -99,30 +106,15 @@ Inizializza o aggiorna metadati sessione.
 - Output: session snapshot + warning.
 
 ### `POST /board-layout`
-Compone la board iniziale assegnando i `module_templates` ai `board_slots`.
-- Input: elenco placements `{slot_id, section_id, orientation}`.
-- Validazioni principali: slot duplicati, section duplicate, orientation invalida, composizione incompleta.
+Compone la board iniziale assegnando i `module_templates` ai `board_slots`. Implementato come un singolo
+endpoint idempotente (non ci sono endpoint separati `load-default`/`reset`/`save`/`load`: quelli restano
+a livello di UX/frontend, non di contratto backend).
+- Input: elenco placements `{slot_id, section_id, orientation}`, `layout_mode` (`manual` | `bootstrap`).
+  - `manual`: nessuna struttura auto-generata, editing strutture consentito in seguito.
+  - `bootstrap`: strutture auto-generate (`include_structure_markers=True`), editing strutture bloccato finché la modalità resta `bootstrap`.
+- Validazioni principali (warning non bloccanti): slot duplicati (`BOARD_LAYOUT_DUPLICATE_SLOT`), section duplicate (`BOARD_LAYOUT_DUPLICATE_SECTION`), section/orientation sconosciute (`BOARD_LAYOUT_UNKNOWN_SECTION` / `BOARD_LAYOUT_UNKNOWN_ORIENTATION`), composizione incompleta (`BOARD_LAYOUT_INCOMPLETE`).
 - Output: stato board layout + board serializzata pronta per la UI, con tile metadata (`tile_id`, coordinate, `terrain`, `animal`, `section_id`, `local_id`).
-
-### `POST /board-layout/load-default`
-Carica nel draft/sessione il layout canonico definito dal progetto.
-- Input: session id.
-- Output: placements del layout di default + board serializzata aggiornata.
-
-### `POST /board-layout/reset`
-Resetta il draft del compositore board.
-- Input: session id.
-- Output: stato board layout vuoto/non completo, senza placements attivi.
-
-### `POST /board-layout/save`
-Salva il layout corrente come preset riutilizzabile.
-- Input: session id, `preset_name`, placements correnti o layout applicato.
-- Output: catalogo preset aggiornato + conferma salvataggio.
-
-### `POST /board-layout/load`
-Carica un preset salvato dall'utente.
-- Input: session id, `preset_name`.
-- Output: placements del preset + board serializzata aggiornata.
+- **Gap noto**: non esiste ancora un vero salvataggio/caricamento di preset multipli lato backend (vedi M7-8..M7-10).
 
 ### `POST /map`
 Registra o aggiorna stato mappa utile alla vista cliccabile dopo la composizione board.
@@ -131,18 +123,38 @@ Registra o aggiorna stato mappa utile alla vista cliccabile dopo la composizione
 
 ### `POST /structures`
 Gestisce dati strutture (monolith/shack/tent ecc.) in modalita `Structures`.
-- Input: strutture per tile (tipo, colore, presenza).
-- Output: stato strutture + warning.
+- Input: strutture per tile (tipo, colore, presenza), supporta `remove: true` per rimuovere una struttura.
+- Output: stato strutture + warning. Bloccato (con warning) se la sessione è in `layout_mode="bootstrap"`.
 
 ### `POST /clues`
 Gestisce dati clue in modalita `Clues`.
 - Input: clue note/constraint per player o sessione.
 - Output: stato clues + warning.
 
+### `POST /ask-ai`
+Chiede all'AI una risposta sì/no sulla tile selezionata (per un player specifico) e restituisce l'aggiornamento.
+- Input: session id, tile/target, player interrogato.
+- Output: risposta AI + stato aggiornato + warning.
+
+### `POST /ai-answer`
+Registra la risposta dell'AI a una domanda "could/is" ricevuta da un altro giocatore.
+- Input: session id, domanda, risposta.
+- Output: stato aggiornato + warning.
+
+### `POST /ai-place-cube`
+Fa piazzare automaticamente dall'AI un cube token (in risposta a un "no").
+- Input: session id, contesto della domanda.
+- Output: stato token aggiornato + warning.
+
 ### `POST /recalculate`
-Esegue pipeline AI su stato corrente.
+Esegue pipeline AI (`infer_hypothesis_space` + `recommend_moves`) su stato corrente.
 - Input: opzionale (es. `top_k`).
-- Output: hypothesis space, mosse consigliate, warning.
+- Output: hypothesis space, mosse consigliate, warning (`AI_RECALCULATE_FAILED` se l'AI fallisce, non bloccante).
+
+### `POST /simulate-observations`
+Genera osservazioni sintetiche (`round`/`cube`) distribuite equamente tra i giocatori, per popolare rapidamente una sessione di test/demo.
+- Input: session id, parametri di generazione (es. numero osservazioni, seed).
+- Output: stato mappa/token aggiornato + warning.
 
 ## 7) Stato sessione in memoria
 
